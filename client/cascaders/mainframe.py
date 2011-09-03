@@ -1,13 +1,14 @@
 '''
-This is the gui class for the main application frame and it handles
-most of the core functionality. 
+This is the gui class for the main application frame and it handles most of the
+core functionality that the user uses while using the application.
+
+It doesn't handle any functionality outside the frame such as messaging
 '''
 from logging import debug
 
 
 import generatedgui
 import client
-
 
 class CascadersFrame(generatedgui.GenCascadersFrame):
     def __init__(self):
@@ -31,10 +32,20 @@ class CascadersFrame(generatedgui.GenCascadersFrame):
         debug('Connecting...')
 
         try:
-            self.client = client.RpcClient('localhost', 5010, 'yacoby', 's1040340')
+            logname = os.eviron['LOGNAME']
+        except KeyError:
+            #TODO
+            pass
+
+        try:
+            self.client = client.RpcClient('localhost',
+                                           5010,
+                                           logname,
+                                           socket.gethostname())
             client.getSubjects(lambda s: None)
             client.getCascaders(lambda c: None)
-        except Exception:
+        except socket.error:
+            #TODO
             pass
 
     #--------------------------------------------------------------------------
