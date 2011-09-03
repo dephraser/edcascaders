@@ -5,7 +5,8 @@ core functionality that the user uses while using the application.
 It doesn't handle any functionality outside the frame such as messaging
 '''
 from logging import debug
-
+import os
+import socket
 
 import generatedgui
 import client
@@ -32,7 +33,7 @@ class CascadersFrame(generatedgui.GenCascadersFrame):
         debug('Connecting...')
 
         try:
-            logname = os.eviron['LOGNAME']
+            logname = os.environ['LOGNAME']
         except KeyError:
             #TODO
             pass
