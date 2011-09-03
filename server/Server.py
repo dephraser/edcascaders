@@ -77,6 +77,7 @@ class UserToken(object):
 
     def message(helpId, message, self):
         #Send a message to the client connected
+        pass
 
 
 class ChatService(Service):
