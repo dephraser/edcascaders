@@ -4,9 +4,11 @@ core functionality that the user uses while using the application.
 
 It doesn't handle any functionality outside the frame such as messaging
 '''
-from logging import debug
+from logging import debug, error
 import os
 import socket
+
+import wx
 
 import generatedgui
 import client
@@ -35,8 +37,13 @@ class CascadersFrame(generatedgui.GenCascadersFrame):
         try:
             logname = os.environ['LOGNAME']
         except KeyError:
-            #TODO
-            pass
+            msg = ('Couldn\'t get LOGNAME from the enviroment,'
+                   ' this only runs on Linux')
+            error(msg)
+            #FIXME dialog box has ok cancel
+            wx.MessageDialog(self,
+                             msg,
+                             'Error getting user name').ShowModal()
 
         try:
             self.client = client.RpcClient('localhost',
@@ -46,8 +53,12 @@ class CascadersFrame(generatedgui.GenCascadersFrame):
             client.getSubjects(lambda s: None)
             client.getCascaders(lambda c: None)
         except socket.error:
-            #TODO
-            pass
+            msg = 'Failed to connect to server'
+            error(msg)
+            wx.MessageDialog(self,
+                             msg,
+                             'error connecting').ShowModal()
+            self.Close()
 
     #--------------------------------------------------------------------------
     def updateCascaderLists(self):
