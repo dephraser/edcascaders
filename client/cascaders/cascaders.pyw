@@ -1,3 +1,7 @@
+'''
+Startup file, responsible for setting up the application and starting the gui
+'''
+
 import logging
 
 import wx
