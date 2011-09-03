@@ -31,9 +31,13 @@ class GenCascadersFrame ( wx.Frame ):
 		
 		bSizer2 = wx.BoxSizer( wx.HORIZONTAL )
 		
-		self.m_staticText1 = wx.StaticText( self.m_status, wx.ID_ANY, u"Status: Connected", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText1 = wx.StaticText( self.m_status, wx.ID_ANY, u"Status: ", wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_staticText1.Wrap( -1 )
 		bSizer2.Add( self.m_staticText1, 0, wx.ALIGN_CENTER_VERTICAL|wx.ALL, 5 )
+		
+		self.mStatus = wx.StaticText( self.m_status, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.mStatus.Wrap( -1 )
+		bSizer2.Add( self.mStatus, 0, wx.ALL|wx.ALIGN_CENTER_VERTICAL, 5 )
 		
 		
 		bSizer2.AddSpacer( ( 50, 0), 0, 0, 5 )
@@ -128,7 +132,7 @@ class GenCascadersFrame ( wx.Frame ):
 		self.m_panel1.SetSizer( fgSizer1 )
 		self.m_panel1.Layout()
 		fgSizer1.Fit( self.m_panel1 )
-		self.m_users.AddPage( self.m_panel1, u"Find Cascader", True )
+		self.m_users.AddPage( self.m_panel1, u"Find Cascader", False )
 		self.m_panel2 = wx.Panel( self.m_users, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
 		fgSizer7 = wx.FlexGridSizer( 3, 1, 0, 0 )
 		fgSizer7.AddGrowableCol( 0 )
@@ -136,32 +140,32 @@ class GenCascadersFrame ( wx.Frame ):
 		fgSizer7.SetFlexibleDirection( wx.BOTH )
 		fgSizer7.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
 		
-		self.m_button3 = wx.Button( self.m_panel2, wx.ID_ANY, u"Start Cascading/Stop Cascading", wx.DefaultPosition, wx.DefaultSize, 0 )
-		fgSizer7.Add( self.m_button3, 0, wx.ALL, 5 )
+		self.mCascadeStartStop = wx.Button( self.m_panel2, wx.ID_ANY, u"Start Cascading/Stop Cascading", wx.DefaultPosition, wx.DefaultSize, 0 )
+		fgSizer7.Add( self.mCascadeStartStop, 0, wx.ALL, 5 )
 		
 		bAddSubject = wx.BoxSizer( wx.HORIZONTAL )
 		
-		m_choice3Choices = [ u"Subject 1" ]
-		self.m_choice3 = wx.Choice( self.m_panel2, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, m_choice3Choices, 0 )
-		self.m_choice3.SetSelection( 0 )
-		bAddSubject.Add( self.m_choice3, 0, wx.ALL|wx.ALIGN_CENTER_VERTICAL, 5 )
+		mCascadeSubjectChoices = []
+		self.mCascadeSubject = wx.Choice( self.m_panel2, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, mCascadeSubjectChoices, 0 )
+		self.mCascadeSubject.SetSelection( 1 )
+		bAddSubject.Add( self.mCascadeSubject, 0, wx.ALL|wx.ALIGN_CENTER_VERTICAL, 5 )
 		
-		self.m_button4 = wx.Button( self.m_panel2, wx.ID_ANY, u"Add Subject", wx.DefaultPosition, wx.DefaultSize, 0 )
-		bAddSubject.Add( self.m_button4, 0, wx.ALL|wx.ALIGN_CENTER_VERTICAL, 5 )
+		self.mCascadeAddSub = wx.Button( self.m_panel2, wx.ID_ANY, u"Add Subject", wx.DefaultPosition, wx.DefaultSize, 0 )
+		bAddSubject.Add( self.mCascadeAddSub, 0, wx.ALL|wx.ALIGN_CENTER_VERTICAL, 5 )
 		
-		self.m_button5 = wx.Button( self.m_panel2, wx.ID_ANY, u"Remove Subject", wx.DefaultPosition, wx.DefaultSize, 0 )
-		bAddSubject.Add( self.m_button5, 0, wx.ALL, 5 )
+		self.mCascadeRemoveSub = wx.Button( self.m_panel2, wx.ID_ANY, u"Remove Subject", wx.DefaultPosition, wx.DefaultSize, 0 )
+		bAddSubject.Add( self.mCascadeRemoveSub, 0, wx.ALL, 5 )
 		
 		fgSizer7.Add( bAddSubject, 1, wx.EXPAND, 5 )
 		
-		m_listBox2Choices = []
-		self.m_listBox2 = wx.ListBox( self.m_panel2, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, m_listBox2Choices, 0 )
-		fgSizer7.Add( self.m_listBox2, 1, wx.ALL|wx.EXPAND, 5 )
+		mCascadeSubjectListChoices = []
+		self.mCascadeSubjectList = wx.ListBox( self.m_panel2, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, mCascadeSubjectListChoices, 0 )
+		fgSizer7.Add( self.mCascadeSubjectList, 1, wx.ALL|wx.EXPAND, 5 )
 		
 		self.m_panel2.SetSizer( fgSizer7 )
 		self.m_panel2.Layout()
 		fgSizer7.Fit( self.m_panel2 )
-		self.m_users.AddPage( self.m_panel2, u"Cascade", False )
+		self.m_users.AddPage( self.m_panel2, u"Cascade", True )
 		
 		fgSizer6.Add( self.m_users, 1, wx.EXPAND |wx.ALL, 5 )
 		
@@ -174,9 +178,9 @@ class GenCascadersFrame ( wx.Frame ):
 		self.m_button1.Bind( wx.EVT_BUTTON, self.onConnectDisconnect )
 		self.m_choice1.Bind( wx.EVT_CHOICE, self.onSubjectSelect )
 		self.m_choice2.Bind( wx.EVT_CHOICE, self.onLabSelect )
-		self.m_button3.Bind( wx.EVT_BUTTON, self.onStartStopCascading )
-		self.m_button4.Bind( wx.EVT_BUTTON, self.onAddSubject )
-		self.m_button5.Bind( wx.EVT_BUTTON, self.onRemoveSubject )
+		self.mCascadeStartStop.Bind( wx.EVT_BUTTON, self.onStartStopCascading )
+		self.mCascadeAddSub.Bind( wx.EVT_BUTTON, self.onAddSubject )
+		self.mCascadeRemoveSub.Bind( wx.EVT_BUTTON, self.onRemoveSubject )
 	
 	def __del__( self ):
 		pass
