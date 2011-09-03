@@ -3,8 +3,13 @@ from rpyc import Service, async
 from rpyc.utils.server import ThreadedServer
 from threading import RLock
 
-broadcast_lock = RLock()
+data_lock = RLock()
 tokens = dict()
+
+subjectList = ["inf1-fp","inf1-cl","inf1-da","inf1-op","inf2a","inf2b","inf2c-cs",
+        "inf2-se","inf2d","Java","Haskell","Python","Ruby","C","C++","PHP",
+        "JavaScript", "Perl", "SQL", "Bash", "Vim", "Emacs", "Eclipse", "Netbeans",
+        "Version Control"]
 
 class UserToken(object):
     def __init__(self, user, hostname, callback):
@@ -33,19 +38,26 @@ class UserToken(object):
 
     def exposed_addSubjects(subjects):
         #add the array of subjects to the users cascading list
-        self.subjects.append(subjects)
+        with data_lock:
+            self.subjects.append(subjects)
 
     def exposed_removeSubjects(subjects):
         #remove the subjects from the users cascading list
-        self
+        with data_lock:
+            for subject in subjects:
+                self.subjects.remove(subject)
 
     def exposed_getCascaderList(self):
         #Return the list of cascaders and their subjects
-        pass
+        with data_lock:
+            returnvalue = []
+            for value in tokens.itervalues():
+                returnvalue.append((value.user , value.subjects))
+            return returnvalue
 
     def exposed_getSubjectList(self):
         #Return the list of allowed subjects
-        pass
+        return subjectList
 
     def exposed_askForHelp(helpId, username, subject, problem, self):
         #Ask the user specified in username for help
@@ -63,6 +75,10 @@ class UserToken(object):
         #Send a message to the user
         pass
 
+    def message(helpId, message, self):
+        #Send a message to the client connected
+
+
 class ChatService(Service):
     
     #This is an automated method, it is not envoked by the coder
@@ -78,7 +94,7 @@ class ChatService(Service):
         if self.token and not self.token.stale:
             raise ValueError("already logged in")
         else:
-            self.token = UserToken(username, async(callback))
+            self.token = UserToken(username, hostname, async(callback))
             return self.token
 
 
