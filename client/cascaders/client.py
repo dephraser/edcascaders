@@ -27,9 +27,16 @@ class RpcClient:
 
     #--------------------------------------------------------------------------
     # 
+    def startCascading(self):
+        rpyc.async(self.user.startCascading)()
+
+    def stopCascading(self):
+        rpyc.async(self.user.stopCascading)()
+
     def addSubjects(self, subjects):
         rpyc.async(self.user.addSubjects)(subjects)
 
     def removeSubjects(self, subjects):
         rpyc.async(self.user.removeSubjects)(subjects)
+
 

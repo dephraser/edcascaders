@@ -81,8 +81,10 @@ class CascadersFrame(generatedgui.GenCascadersFrame):
     def onStartStopCascading(self, event):
         if self.cascading:
             self.client.stopCascading()
+            self.mCascadeStartStop.SetLabel('Start Cascading')
         else:
             self.client.startCascading()
+            self.mCascadeStartStop.SetLabel('Stop Cascading')
     
     def onAddSubject(self, event):
         subject = self.mCascadeSubject.GetStringSelection()
@@ -94,10 +96,13 @@ class CascadersFrame(generatedgui.GenCascadersFrame):
     
     def onRemoveSubject(self, event):
         subject = self.mCascadeSubjectList.GetStringSelection()
-        debug('Selected Subject is: %s' % subject)
         if subject and subject in self.cascadeSubjects:
+            debug('Removing subject: %s' % subject)
             self.client.removeSubjects([subject])
             self.cascadeSubjects.remove(subject)
+            index = self.mCascadeSubjectList.FindString(subject)
+            self.mCascadeSubjectList.Delete(index)
+
 
     # Filter Stuff
     def onSubjectSelect(self, event):
