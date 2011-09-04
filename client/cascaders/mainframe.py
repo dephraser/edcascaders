@@ -12,6 +12,7 @@ import wx
 
 import generatedgui
 import client
+from locator import Locator
 
 class CascadersFrame(generatedgui.GenCascadersFrame):
     def __init__(self):
@@ -24,6 +25,14 @@ class CascadersFrame(generatedgui.GenCascadersFrame):
         self.cascadeSubjects = set()
 
         self.cascading = False
+
+        self.locator = Locator(open('./data/hosts'))
+
+        self.mFilterLab.Clear()
+        self.mFilterLab.Append('All')
+        for lab in self.locator.getLabs():
+            self.mFilterLab.Append(lab)
+        self.mFilterLab.SetSelection(0)
 
         self.connect()
 
@@ -74,15 +83,24 @@ class CascadersFrame(generatedgui.GenCascadersFrame):
         for subject in self.subjects:
             self.mCascadeSubject.Append(subject)
 
+        self.mFilterSubject.Clear()
+        self.mFilterSubject.Append('All')
+        for subject in self.subjects:
+            self.mFilterSubject.Append(subject)
+        self.mFilterSubject.SetSelection(0)
+
     def updateCascaderLists(self):
         self.mFilteredCascaderList.Clear()
 
         for username, hostname, subjects in self.cascaders:
+            lab = self.locator.getLabFromHostname(hostname)
 
-            if (self.mFilterSubjects.GetSelection == 0 or
-                self.mFilterSubjects.GetStringSelection() in subjects):
+            if (self.mFilterSubjects.GetSelection() == 0 or
+                    self.mFilterSubjects.GetStringSelection() in subjects):
 
-                self.mFilteredCascaderList.Append(username)
+                if (self.mFilterLab.GetSelection() == 0 or
+                        self.mFilterLab.GetStringSelection() == lab ):
+                    self.mFilteredCascaderList.Append(username)
 
     #--------------------------------------------------------------------------
     def onStartStopCascading(self, event):
