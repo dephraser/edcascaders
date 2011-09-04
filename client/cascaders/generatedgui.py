@@ -1,13 +1,14 @@
 # -*- coding: utf-8 -*- 
 
 ###########################################################################
-## Python code generated with wxFormBuilder (version Jun  6 2011)
+## Python code generated with wxFormBuilder (version May  2 2011)
 ## http://www.wxformbuilder.org/
 ##
 ## PLEASE DO "NOT" EDIT THIS FILE!
 ###########################################################################
 
 import wx
+import wx.aui
 
 ###########################################################################
 ## Class GenCascadersFrame
@@ -93,7 +94,7 @@ class GenCascadersFrame ( wx.Frame ):
 		self.m_staticText5.Wrap( -1 )
 		bFilters.Add( self.m_staticText5, 0, wx.ALL|wx.ALIGN_CENTER_VERTICAL, 5 )
 		
-		mFilterLabChoices = [ u"All", u"Level 5 West", u"Level 5 North", u"Level 5 South" ]
+		mFilterLabChoices = [ u"All" ]
 		self.mFilterLab = wx.Choice( self.m_panel6, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, mFilterLabChoices, 0 )
 		self.mFilterLab.SetSelection( 0 )
 		bFilters.Add( self.mFilterLab, 0, wx.ALL|wx.ALIGN_CENTER_VERTICAL, 5 )
@@ -132,7 +133,7 @@ class GenCascadersFrame ( wx.Frame ):
 		self.m_panel1.SetSizer( fgSizer1 )
 		self.m_panel1.Layout()
 		fgSizer1.Fit( self.m_panel1 )
-		self.m_users.AddPage( self.m_panel1, u"Find Cascader", False )
+		self.m_users.AddPage( self.m_panel1, u"Find Cascader", True )
 		self.m_panel2 = wx.Panel( self.m_users, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
 		fgSizer7 = wx.FlexGridSizer( 3, 1, 0, 0 )
 		fgSizer7.AddGrowableCol( 0 )
@@ -165,7 +166,7 @@ class GenCascadersFrame ( wx.Frame ):
 		self.m_panel2.SetSizer( fgSizer7 )
 		self.m_panel2.Layout()
 		fgSizer7.Fit( self.m_panel2 )
-		self.m_users.AddPage( self.m_panel2, u"Cascade", True )
+		self.m_users.AddPage( self.m_panel2, u"Cascade", False )
 		
 		fgSizer6.Add( self.m_users, 1, wx.EXPAND |wx.ALL, 5 )
 		
@@ -178,6 +179,7 @@ class GenCascadersFrame ( wx.Frame ):
 		self.m_button1.Bind( wx.EVT_BUTTON, self.onConnectDisconnect )
 		self.mFilterSubject.Bind( wx.EVT_CHOICE, self.onSubjectSelect )
 		self.mFilterLab.Bind( wx.EVT_CHOICE, self.onLabSelect )
+		self.mFilteredCascaderList.Bind( wx.EVT_LISTBOX, self.onCascaderClick )
 		self.mCascadeStartStop.Bind( wx.EVT_BUTTON, self.onStartStopCascading )
 		self.mCascadeAddSub.Bind( wx.EVT_BUTTON, self.onAddSubject )
 		self.mCascadeRemoveSub.Bind( wx.EVT_BUTTON, self.onRemoveSubject )
@@ -194,6 +196,9 @@ class GenCascadersFrame ( wx.Frame ):
 		event.Skip()
 	
 	def onLabSelect( self, event ):
+		event.Skip()
+	
+	def onCascaderClick( self, event ):
 		event.Skip()
 	
 	def onStartStopCascading( self, event ):
@@ -213,21 +218,18 @@ class GenCascadersFrame ( wx.Frame ):
 class MessagingDialog ( wx.Dialog ):
 	
 	def __init__( self, parent ):
-		wx.Dialog.__init__ ( self, parent, id = wx.ID_ANY, title = wx.EmptyString, pos = wx.DefaultPosition, size = wx.DefaultSize, style = wx.DEFAULT_DIALOG_STYLE )
+		wx.Dialog.__init__ ( self, parent, id = wx.ID_ANY, title = wx.EmptyString, pos = wx.DefaultPosition, size = wx.Size( 443,370 ), style = wx.DEFAULT_DIALOG_STYLE )
 		
 		self.SetSizeHintsSz( wx.DefaultSize, wx.DefaultSize )
 		
 		bSizer14 = wx.BoxSizer( wx.VERTICAL )
 		
-		self.m_notebook2 = wx.Notebook( self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.m_panel10 = wx.Panel( self.m_notebook2, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
-		self.m_notebook2.AddPage( self.m_panel10, u"a page", False )
+		self.mConversations = wx.aui.AuiNotebook( self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.aui.AUI_NB_CLOSE_ON_ALL_TABS|wx.aui.AUI_NB_DEFAULT_STYLE|wx.aui.AUI_NB_TAB_MOVE|wx.aui.AUI_NB_WINDOWLIST_BUTTON )
 		
-		bSizer14.Add( self.m_notebook2, 1, wx.EXPAND |wx.ALL, 5 )
+		bSizer14.Add( self.mConversations, 1, wx.EXPAND, 5 )
 		
 		self.SetSizer( bSizer14 )
 		self.Layout()
-		bSizer14.Fit( self )
 		
 		self.Centre( wx.BOTH )
 	
