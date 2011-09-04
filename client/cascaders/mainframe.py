@@ -33,25 +33,27 @@ class CascadersFrame(generatedgui.GenCascadersFrame):
         ''' also does the setup post connect '''
 
         debug('Connecting...')
+        self.mStatus.SetLabel('Connecting...')
 
         try:
             logname = os.environ['LOGNAME']
         except KeyError:
             msg = ('Couldn\'t get LOGNAME from the enviroment,'
-                   ' this only runs on Linux')
+                   ' this only runs on Linux at the moment')
             error(msg)
             #FIXME dialog box has ok cancel
             wx.MessageDialog(self,
                              msg,
                              'Error getting user name').ShowModal()
+        self.mUserName.SetLabel(logname)
 
         try:
             self.client = client.RpcClient('localhost',
                                            5010,
                                            logname,
                                            socket.gethostname())
-            client.getSubjects(lambda s: None)
-            client.getCascaders(lambda c: None)
+            self.client.getSubjectList(lambda s: (setattr(self, 'subjects', s.value), self.updateAllSubjects()))
+            self.client.getCascaderList(lambda c: setattr(self, 'cascaders', c))
         except socket.error:
             msg = 'Failed to connect to server'
             error(msg)
@@ -60,7 +62,15 @@ class CascadersFrame(generatedgui.GenCascadersFrame):
                              'error connecting').ShowModal()
             self.Close()
 
+        self.mStatus.SetLabel('Connected')
+
     #--------------------------------------------------------------------------
+    def updateAllSubjects(self):
+        debug('Subjects: %s' % self.subjects)
+        self.mCascadeSubject.Clear()
+        for subject in self.subjects:
+            self.mCascadeSubject.Append(subject)
+
     def updateCascaderLists(self):
         pass
 
@@ -72,8 +82,11 @@ class CascadersFrame(generatedgui.GenCascadersFrame):
             self.client.startCascading()
     
     def onAddSubject(self, event):
-        #self.client.addSubjects(
-        pass
+        subject = self.mCascadeSubject.GetStringSelection()
+        if subject:
+            debug('Adding subject: %s' % subject)
+            self.mCascadeSubjectList.Append(subject)
+            self.client.addSubjects([subject])
     
     def onRemoveSubject(self, event):
         #self.client.removeSubjects(

@@ -9,7 +9,7 @@ class RpcClient:
         self.conn = rpyc.connect(host, port)
   
         try:
-            self.user = self.conn.root.userJoin(username, computerHostname)
+            self.user = self.conn.root.userJoin(username, computerHostname, lambda: None)
         except ValueError:
             self.conn.close()
             self.conn = None
@@ -18,13 +18,15 @@ class RpcClient:
     #--------------------------------------------------------------------------
     # simple functions used on startup
     def getCascaderList(self, callback):
-        res = rpyc.async(self.conn.root.getCascaderList)()
+        res = rpyc.async(self.user.getCascaderList)()
         res.add_callback(callback)
 
     def getSubjectList(self, callback):
-        res = rpyc.async(self.conn.root.getSubjectList)()
+        res = rpyc.async(self.user.getSubjectList)()
         res.add_callback(callback)
 
     #--------------------------------------------------------------------------
     # 
+    def addSubjects(self, subjects):
+        rpyc.async(self.user.addSubjects)(subjects)
 
