@@ -31,9 +31,9 @@ class GenCascadersFrame ( wx.Frame ):
 		
 		bSizer2 = wx.BoxSizer( wx.HORIZONTAL )
 		
-		self.m_staticText1 = wx.StaticText( self.m_status, wx.ID_ANY, u"Status: ", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText1 = wx.StaticText( self.m_status, wx.ID_ANY, u"Status:", wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_staticText1.Wrap( -1 )
-		bSizer2.Add( self.m_staticText1, 0, wx.ALIGN_CENTER_VERTICAL|wx.ALL, 5 )
+		bSizer2.Add( self.m_staticText1, 0, wx.ALIGN_CENTER_VERTICAL|wx.TOP|wx.BOTTOM|wx.LEFT, 5 )
 		
 		self.mStatus = wx.StaticText( self.m_status, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.mStatus.Wrap( -1 )
