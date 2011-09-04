@@ -30,3 +30,6 @@ class RpcClient:
     def addSubjects(self, subjects):
         rpyc.async(self.user.addSubjects)(subjects)
 
+    def removeSubjects(self, subjects):
+        rpyc.async(self.user.removeSubjects)(subjects)
+

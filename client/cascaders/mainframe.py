@@ -20,6 +20,9 @@ class CascadersFrame(generatedgui.GenCascadersFrame):
 
         self.subjects  = []
         self.cascaders = []
+
+        self.cascadeSubjects = set()
+
         self.cascading = False
 
         self.connect()
@@ -83,14 +86,18 @@ class CascadersFrame(generatedgui.GenCascadersFrame):
     
     def onAddSubject(self, event):
         subject = self.mCascadeSubject.GetStringSelection()
-        if subject:
+        if subject and not subject in self.cascadeSubjects:
             debug('Adding subject: %s' % subject)
             self.mCascadeSubjectList.Append(subject)
             self.client.addSubjects([subject])
+            self.cascadeSubjects.add(subject)
     
     def onRemoveSubject(self, event):
-        #self.client.removeSubjects(
-        pass
+        subject = self.mCascadeSubjectList.GetStringSelection()
+        debug('Selected Subject is: %s' % subject)
+        if subject and subject in self.cascadeSubjects:
+            self.client.removeSubjects([subject])
+            self.cascadeSubjects.remove(subject)
 
     # Filter Stuff
     def onSubjectSelect(self, event):
