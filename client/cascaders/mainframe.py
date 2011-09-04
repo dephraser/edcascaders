@@ -14,6 +14,13 @@ import generatedgui
 import client
 from locator import Locator
 
+def errorDialog(title, msg):
+        error('%s - %s' % (title, msg))
+        wx.MessageDialog(None,
+                         msg,
+                         title,
+                         style=wx.OK|wx.ICON_ERROR).ShowModal()
+
 class CascadersFrame(generatedgui.GenCascadersFrame):
     def __init__(self):
         generatedgui.GenCascadersFrame.__init__(self, None)
@@ -50,13 +57,9 @@ class CascadersFrame(generatedgui.GenCascadersFrame):
         try:
             logname = os.environ['LOGNAME']
         except KeyError:
-            msg = ('Couldn\'t get LOGNAME from the enviroment,'
-                   ' this only runs on Linux at the moment')
-            error(msg)
-            #FIXME dialog box has ok cancel
-            wx.MessageDialog(self,
-                             msg,
-                             'Error getting user name').ShowModal()
+            errorDialog('Couldn\'t get user name',
+                          ('Couldn\'t get LOGNAME from the enviroment,'
+                           ' this only runs on Linux at the moment'))
         self.mUserName.SetLabel(logname)
 
         try:
@@ -67,11 +70,7 @@ class CascadersFrame(generatedgui.GenCascadersFrame):
             self.client.getSubjectList(lambda s: (setattr(self, 'subjects', s.value), self.updateAllSubjects()))
             self.client.getCascaderList(lambda c: (setattr(self, 'cascaders', c.value), self.updateCascaderLists))
         except socket.error:
-            msg = 'Failed to connect to server'
-            error(msg)
-            wx.MessageDialog(self,
-                             msg,
-                             'error connecting').ShowModal()
+            errorDialog('Error Connecting', 'Failed to connect to server')
             self.Close()
 
         self.mStatus.SetLabel('Connected')
@@ -106,13 +105,14 @@ class CascadersFrame(generatedgui.GenCascadersFrame):
     def onStartStopCascading(self, event):
         self.mCascadeStartStop.Disable()
         if self.cascading:
+            self.cascading = False
             self.client.stopCascading(lambda: self.mCascadeStartStop.Enable())
             self.mCascadeStartStop.SetLabel('Start Cascading')
         else:
+            self.cascading = True
             self.client.startCascading(lambda: self.mCascadeStartStop.Enable())
             self.mCascadeStartStop.SetLabel('Stop Cascading')
 
-        self.cascading = not self.cascading
     
     def onAddSubject(self, event):
         subject = self.mCascadeSubject.GetStringSelection()
@@ -121,6 +121,7 @@ class CascadersFrame(generatedgui.GenCascadersFrame):
             self.mCascadeSubjectList.Append(subject)
             self.client.addSubjects([subject])
             self.cascadeSubjects.add(subject)
+        debug('Subjects now: %s' % self.cascadeSubjects)
     
     def onRemoveSubject(self, event):
         subject = self.mCascadeSubjectList.GetStringSelection()
@@ -130,6 +131,7 @@ class CascadersFrame(generatedgui.GenCascadersFrame):
             self.cascadeSubjects.remove(subject)
             index = self.mCascadeSubjectList.FindString(subject)
             self.mCascadeSubjectList.Delete(index)
+        debug('Subjects now: %s' % self.cascadeSubjects)
 
     # Filter Stuff
     def onSubjectSelect(self, event):
