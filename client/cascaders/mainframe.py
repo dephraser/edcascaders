@@ -84,15 +84,14 @@ class CascadersFrame(generatedgui.GenCascadersFrame):
 
                 self.mFilteredCascaderList.Append(username)
 
-            
-
     #--------------------------------------------------------------------------
     def onStartStopCascading(self, event):
+        self.mCascadeStartStop.Disable()
         if self.cascading:
-            self.client.stopCascading()
+            self.client.stopCascading(lambda: self.mCascadeStartStop.Enable())
             self.mCascadeStartStop.SetLabel('Start Cascading')
         else:
-            self.client.startCascading()
+            self.client.startCascading(lambda: self.mCascadeStartStop.Enable())
             self.mCascadeStartStop.SetLabel('Stop Cascading')
 
         self.cascading = not self.cascading
@@ -113,7 +112,6 @@ class CascadersFrame(generatedgui.GenCascadersFrame):
             self.cascadeSubjects.remove(subject)
             index = self.mCascadeSubjectList.FindString(subject)
             self.mCascadeSubjectList.Delete(index)
-
 
     # Filter Stuff
     def onSubjectSelect(self, event):

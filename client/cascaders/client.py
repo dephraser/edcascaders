@@ -1,5 +1,6 @@
 '''
-Generic wrapper around the functions that the server provides
+Generic wrapper around the functions that the server provides, this 
+tries to pull some of the bulk out of the gui classes
 '''
 import rpyc
 
@@ -27,11 +28,15 @@ class RpcClient:
 
     #--------------------------------------------------------------------------
     # 
-    def startCascading(self):
-        rpyc.async(self.user.startCascading)()
+    def startCascading(self, callback=None):
+        res = rpyc.async(self.user.startCascading)()
+        if callback is not None:
+            res.add_callback(callback)
 
-    def stopCascading(self):
-        rpyc.async(self.user.stopCascading)()
+    def stopCascading(self, callback=None):
+        res = rpyc.async(self.user.stopCascading)()
+        if callback is not None:
+            res.add_callback(callback)
 
     def addSubjects(self, subjects):
         rpyc.async(self.user.addSubjects)(subjects)

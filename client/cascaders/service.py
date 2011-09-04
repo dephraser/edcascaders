@@ -1,6 +1,6 @@
 '''
-This provides the class for the 
+This provides the service for data sent from the server to the client
 '''
 
-class Service:
+class RpcService:
     pass
