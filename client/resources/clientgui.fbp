@@ -755,7 +755,7 @@
                         <object class="notebookpage" expanded="1">
                             <property name="bitmap"></property>
                             <property name="label">Find Cascader</property>
-                            <property name="select">0</property>
+                            <property name="select">1</property>
                             <object class="wxPanel" expanded="1">
                                 <property name="BottomDockable">1</property>
                                 <property name="LeftDockable">1</property>
@@ -1315,7 +1315,7 @@
                                                                 <property name="caption"></property>
                                                                 <property name="caption_visible">1</property>
                                                                 <property name="center_pane">0</property>
-                                                                <property name="choices">&quot;All&quot; &quot;Level 5 West&quot;</property>
+                                                                <property name="choices">&quot;All&quot; &quot;Level 5 West&quot; &quot;Level 5 North&quot; &quot;Level 5 South&quot;</property>
                                                                 <property name="close_button">1</property>
                                                                 <property name="context_help"></property>
                                                                 <property name="context_menu">1</property>
@@ -1686,7 +1686,7 @@
                         <object class="notebookpage" expanded="1">
                             <property name="bitmap"></property>
                             <property name="label">Cascade</property>
-                            <property name="select">1</property>
+                            <property name="select">0</property>
                             <object class="wxPanel" expanded="1">
                                 <property name="BottomDockable">1</property>
                                 <property name="LeftDockable">1</property>

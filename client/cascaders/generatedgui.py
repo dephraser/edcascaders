@@ -93,7 +93,7 @@ class GenCascadersFrame ( wx.Frame ):
 		self.m_staticText5.Wrap( -1 )
 		bFilters.Add( self.m_staticText5, 0, wx.ALL|wx.ALIGN_CENTER_VERTICAL, 5 )
 		
-		m_choice2Choices = [ u"All", u"Level 5 West" ]
+		m_choice2Choices = [ u"All", u"Level 5 West", u"Level 5 North", u"Level 5 South" ]
 		self.m_choice2 = wx.Choice( self.m_panel6, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, m_choice2Choices, 0 )
 		self.m_choice2.SetSelection( 0 )
 		bFilters.Add( self.m_choice2, 0, wx.ALL|wx.ALIGN_CENTER_VERTICAL, 5 )
@@ -132,7 +132,7 @@ class GenCascadersFrame ( wx.Frame ):
 		self.m_panel1.SetSizer( fgSizer1 )
 		self.m_panel1.Layout()
 		fgSizer1.Fit( self.m_panel1 )
-		self.m_users.AddPage( self.m_panel1, u"Find Cascader", False )
+		self.m_users.AddPage( self.m_panel1, u"Find Cascader", True )
 		self.m_panel2 = wx.Panel( self.m_users, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
 		fgSizer7 = wx.FlexGridSizer( 3, 1, 0, 0 )
 		fgSizer7.AddGrowableCol( 0 )
@@ -165,7 +165,7 @@ class GenCascadersFrame ( wx.Frame ):
 		self.m_panel2.SetSizer( fgSizer7 )
 		self.m_panel2.Layout()
 		fgSizer7.Fit( self.m_panel2 )
-		self.m_users.AddPage( self.m_panel2, u"Cascade", True )
+		self.m_users.AddPage( self.m_panel2, u"Cascade", False )
 		
 		fgSizer6.Add( self.m_users, 1, wx.EXPAND |wx.ALL, 5 )
 		
