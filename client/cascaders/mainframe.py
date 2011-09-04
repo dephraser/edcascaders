@@ -56,7 +56,7 @@ class CascadersFrame(generatedgui.GenCascadersFrame):
                                            logname,
                                            socket.gethostname())
             self.client.getSubjectList(lambda s: (setattr(self, 'subjects', s.value), self.updateAllSubjects()))
-            self.client.getCascaderList(lambda c: setattr(self, 'cascaders', c))
+            self.client.getCascaderList(lambda c: (setattr(self, 'cascaders', c.value), self.updateCascaderLists))
         except socket.error:
             msg = 'Failed to connect to server'
             error(msg)
@@ -75,7 +75,16 @@ class CascadersFrame(generatedgui.GenCascadersFrame):
             self.mCascadeSubject.Append(subject)
 
     def updateCascaderLists(self):
-        pass
+        self.mFilteredCascaderList.Clear()
+
+        for username, hostname, subjects in self.cascaders:
+
+            if (self.mFilterSubjects.GetSelection == 0 or
+                self.mFilterSubjects.GetStringSelection() in subjects):
+
+                self.mFilteredCascaderList.Append(username)
+
+            
 
     #--------------------------------------------------------------------------
     def onStartStopCascading(self, event):
@@ -85,6 +94,8 @@ class CascadersFrame(generatedgui.GenCascadersFrame):
         else:
             self.client.startCascading()
             self.mCascadeStartStop.SetLabel('Stop Cascading')
+
+        self.cascading = not self.cascading
     
     def onAddSubject(self, event):
         subject = self.mCascadeSubject.GetStringSelection()
