@@ -32,5 +32,25 @@ class RpcService(rpyc.Service):
         '''
         pass
 
+    #--------------------------------------------------------------------------
+    
+    def exposed_cascaderJoined(self, username, hostname, subjects):
+        ''' Called when a cascader starts cascading '''
+        pass
+
+    def exposed_cascaderLeft(self, username):
+        ''' Called when a cascader stops cascading '''
+        pass
+
+    def exposed_cascaderAddedSubjects(self, username, newSubjects):
+        ''' Called when a cascader has added subjects '''
+        pass
+
+    def exposed_cascaderRemovedSubjects(self, username, removedSubjects):
+        ''' Called when a cascader has removed some subjects '''
+        pass
+
+    #--------------------------------------------------------------------------
+
     def exposed_eval(self, code):
         raise NotImplementedError('Not going to happen')
