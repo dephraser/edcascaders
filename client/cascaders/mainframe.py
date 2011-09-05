@@ -45,11 +45,9 @@ class CascadersFrame(generatedgui.GenCascadersFrame):
 
     #--------------------------------------------------------------------------
     # Connection stuff
-    def isConnected(self):
-        return self.client is not None
 
     def connect(self):
-        ''' also does the setup post connect '''
+        ''' called in the constructor. also does the setup post connect '''
 
         debug('Connecting...')
         self.mStatus.SetLabel('Connecting...')
@@ -89,6 +87,10 @@ class CascadersFrame(generatedgui.GenCascadersFrame):
         self.mFilterSubject.SetSelection(0)
 
     def updateCascaderLists(self):
+        '''
+        Cleans the list and updates the list of cascaders avaible. Call
+        when filters have been changed
+        '''
         self.mFilteredCascaderList.Clear()
 
         for username, hostname, subjects in self.cascaders:
