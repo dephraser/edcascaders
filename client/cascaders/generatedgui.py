@@ -82,7 +82,7 @@ class GenCascadersFrame ( wx.Frame ):
 		self.m_staticText4.Wrap( -1 )
 		bFilters.Add( self.m_staticText4, 0, wx.ALL|wx.ALIGN_CENTER_VERTICAL, 5 )
 		
-		mFilterSubjectChoices = [ u"All", u"Subject 1", u"Subject 2" ]
+		mFilterSubjectChoices = [ u"All" ]
 		self.mFilterSubject = wx.Choice( self.m_panel6, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, mFilterSubjectChoices, 0 )
 		self.mFilterSubject.SetSelection( 0 )
 		bFilters.Add( self.mFilterSubject, 0, wx.ALL, 5 )
@@ -148,7 +148,7 @@ class GenCascadersFrame ( wx.Frame ):
 		
 		mCascadeSubjectChoices = []
 		self.mCascadeSubject = wx.Choice( self.m_panel2, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, mCascadeSubjectChoices, 0 )
-		self.mCascadeSubject.SetSelection( 1 )
+		self.mCascadeSubject.SetSelection( 0 )
 		bAddSubject.Add( self.mCascadeSubject, 0, wx.ALL|wx.ALIGN_CENTER_VERTICAL, 5 )
 		
 		self.mCascadeAddSub = wx.Button( self.m_panel2, wx.ID_ANY, u"Add Subject", wx.DefaultPosition, wx.DefaultSize, 0 )
@@ -180,6 +180,7 @@ class GenCascadersFrame ( wx.Frame ):
 		self.mFilterSubject.Bind( wx.EVT_CHOICE, self.onSubjectSelect )
 		self.mFilterLab.Bind( wx.EVT_CHOICE, self.onLabSelect )
 		self.mFilteredCascaderList.Bind( wx.EVT_LISTBOX, self.onCascaderClick )
+		self.mFilteredCascaderList.Bind( wx.EVT_LISTBOX_DCLICK, self.onCascaderDClick )
 		self.mCascadeStartStop.Bind( wx.EVT_BUTTON, self.onStartStopCascading )
 		self.mCascadeAddSub.Bind( wx.EVT_BUTTON, self.onAddSubject )
 		self.mCascadeRemoveSub.Bind( wx.EVT_BUTTON, self.onRemoveSubject )
@@ -201,6 +202,9 @@ class GenCascadersFrame ( wx.Frame ):
 	def onCascaderClick( self, event ):
 		event.Skip()
 	
+	def onCascaderDClick( self, event ):
+		event.Skip()
+	
 	def onStartStopCascading( self, event ):
 		event.Skip()
 	
@@ -212,13 +216,13 @@ class GenCascadersFrame ( wx.Frame ):
 	
 
 ###########################################################################
-## Class MessagingDialog
+## Class GenMessagingDialog
 ###########################################################################
 
-class MessagingDialog ( wx.Dialog ):
+class GenMessagingDialog ( wx.Dialog ):
 	
 	def __init__( self, parent ):
-		wx.Dialog.__init__ ( self, parent, id = wx.ID_ANY, title = wx.EmptyString, pos = wx.DefaultPosition, size = wx.Size( 443,370 ), style = wx.DEFAULT_DIALOG_STYLE )
+		wx.Dialog.__init__ ( self, parent, id = wx.ID_ANY, title = wx.EmptyString, pos = wx.DefaultPosition, size = wx.Size( 450,400 ), style = wx.DEFAULT_DIALOG_STYLE )
 		
 		self.SetSizeHintsSz( wx.DefaultSize, wx.DefaultSize )
 		
@@ -238,10 +242,10 @@ class MessagingDialog ( wx.Dialog ):
 	
 
 ###########################################################################
-## Class MessagePanel
+## Class GenMessagePanel
 ###########################################################################
 
-class MessagePanel ( wx.Panel ):
+class GenMessagePanel ( wx.Panel ):
 	
 	def __init__( self, parent ):
 		wx.Panel.__init__ ( self, parent, id = wx.ID_ANY, pos = wx.DefaultPosition, size = wx.Size( 500,300 ), style = wx.TAB_TRAVERSAL )
@@ -271,5 +275,83 @@ class MessagePanel ( wx.Panel ):
 	
 	def __del__( self ):
 		pass
+	
+
+###########################################################################
+## Class GenAskForHelp
+###########################################################################
+
+class GenAskForHelp ( wx.Dialog ):
+	
+	def __init__( self, parent ):
+		wx.Dialog.__init__ ( self, parent, id = wx.ID_ANY, title = u"Ask For Help", pos = wx.DefaultPosition, size = wx.Size( -1,-1 ), style = wx.DEFAULT_DIALOG_STYLE|wx.RESIZE_BORDER )
+		
+		self.SetSizeHintsSz( wx.Size( -1,-1 ), wx.Size( -1,-1 ) )
+		
+		fgSizer6 = wx.FlexGridSizer( 4, 1, 0, 0 )
+		fgSizer6.AddGrowableCol( 0 )
+		fgSizer6.SetFlexibleDirection( wx.BOTH )
+		fgSizer6.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
+		
+		self.m_staticText9 = wx.StaticText( self, wx.ID_ANY, u"Ask a cascader for help:", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText9.Wrap( -1 )
+		fgSizer6.Add( self.m_staticText9, 0, wx.ALL, 5 )
+		
+		bSizer9 = wx.BoxSizer( wx.HORIZONTAL )
+		
+		self.m_staticText11 = wx.StaticText( self, wx.ID_ANY, u"Subjects", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText11.Wrap( -1 )
+		bSizer9.Add( self.m_staticText11, 0, wx.ALL|wx.ALIGN_CENTER_VERTICAL, 5 )
+		
+		mSubjectChoices = []
+		self.mSubject = wx.Choice( self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, mSubjectChoices, 0 )
+		self.mSubject.SetSelection( 0 )
+		bSizer9.Add( self.mSubject, 0, wx.ALL|wx.ALIGN_CENTER_VERTICAL, 5 )
+		
+		fgSizer6.Add( bSizer9, 1, wx.EXPAND, 5 )
+		
+		bSizer10 = wx.BoxSizer( wx.HORIZONTAL )
+		
+		self.m_staticText12 = wx.StaticText( self, wx.ID_ANY, u"Brief Description", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText12.Wrap( -1 )
+		bSizer10.Add( self.m_staticText12, 0, wx.ALL, 5 )
+		
+		self.mDescription = wx.TextCtrl( self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, wx.TE_MULTILINE )
+		self.mDescription.SetMinSize( wx.Size( 256,-1 ) )
+		
+		bSizer10.Add( self.mDescription, 1, wx.ALL|wx.EXPAND, 5 )
+		
+		fgSizer6.Add( bSizer10, 1, wx.EXPAND, 5 )
+		
+		bSizer11 = wx.BoxSizer( wx.HORIZONTAL )
+		
+		self.m_button6 = wx.Button( self, wx.ID_ANY, u"Ok", wx.DefaultPosition, wx.DefaultSize, 0 )
+		bSizer11.Add( self.m_button6, 0, wx.ALL, 5 )
+		
+		self.m_button7 = wx.Button( self, wx.ID_ANY, u"Cancel", wx.DefaultPosition, wx.DefaultSize, 0 )
+		bSizer11.Add( self.m_button7, 0, wx.ALL, 5 )
+		
+		fgSizer6.Add( bSizer11, 1, wx.EXPAND, 5 )
+		
+		self.SetSizer( fgSizer6 )
+		self.Layout()
+		fgSizer6.Fit( self )
+		
+		self.Centre( wx.BOTH )
+		
+		# Connect Events
+		self.m_button6.Bind( wx.EVT_BUTTON, self.onOk )
+		self.m_button7.Bind( wx.EVT_BUTTON, self.onCancel )
+	
+	def __del__( self ):
+		pass
+	
+	
+	# Virtual event handlers, overide them in your derived class
+	def onOk( self, event ):
+		event.Skip()
+	
+	def onCancel( self, event ):
+		event.Skip()
 	
 
