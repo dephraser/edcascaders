@@ -27,7 +27,7 @@ class RpcClient:
         res.add_callback(callback)
 
     #--------------------------------------------------------------------------
-    # 
+    # cascading related 
     def startCascading(self, callback=None):
         res = rpyc.async(self.user.startCascading)()
         if callback is not None:
@@ -44,3 +44,10 @@ class RpcClient:
     def removeSubjects(self, subjects):
         rpyc.async(self.user.removeSubjects)(subjects)
 
+    #--------------------------------------------------------------------------
+    # messaging related
+    def askForHelp(self, helpid, username, subject, problem, callback=None):
+        res = rpyc.async(self.user.askForHelp)(helpid, username,
+                                               subject, problem)
+        if callback is not None:
+            res.add_callback(callback)

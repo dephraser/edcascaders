@@ -119,19 +119,21 @@ class CascadersFrame(generatedgui.GenCascadersFrame):
             self.mCascadeStartStop.SetLabel('Stop Cascading')
 
     def onCascaderDClick(self, event):
+        cascaderUsername = event.GetString()
+        
+        #ask user topic, brief description
         subject = None
         if self.mFilterSubject.GetSelection() != 0:
             subject = self.mFilterSubject.GetSelection()
-
-        #ask user topic, brief description
         helpDialog = AskForHelp(self, self.subjects, subject)
         helpDialog.ShowModal()
 
         if helpDialog.isOk():
-
-            #ask for help with callback
-            #open message window
-            pass
+            helpid = 1 #FIXME
+            self.client.askForHelp(helpId,
+                                   cascaderUsername,
+                                   helpDialog.getSubject(),
+                                   helpDialog.getDescription())
     
     def onAddSubject(self, event):
         subject = self.mCascadeSubject.GetStringSelection()
