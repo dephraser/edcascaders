@@ -44,4 +44,3 @@ class RpcClient:
     def removeSubjects(self, subjects):
         rpyc.async(self.user.removeSubjects)(subjects)
 
-

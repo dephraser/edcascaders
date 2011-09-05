@@ -13,6 +13,7 @@ import wx
 import generatedgui
 import client
 from locator import Locator
+from askdialog import AskForHelp
 
 def errorDialog(title, msg):
         error('%s - %s' % (title, msg))
@@ -41,6 +42,8 @@ class CascadersFrame(generatedgui.GenCascadersFrame):
             self.mFilterLab.Append(lab)
         self.mFilterLab.SetSelection(0)
 
+        self.mFilteredCascaderList.Append('yacoby')
+
         self.connect()
 
     #--------------------------------------------------------------------------
@@ -66,7 +69,7 @@ class CascadersFrame(generatedgui.GenCascadersFrame):
                                            logname,
                                            socket.gethostname())
             self.client.getSubjectList(lambda s: (setattr(self, 'subjects', s.value), self.updateAllSubjects()))
-            self.client.getCascaderList(lambda c: (setattr(self, 'cascaders', c.value), self.updateCascaderLists))
+            self.client.getCascaderList(lambda c: (setattr(self, 'cascaders', c.value), self.updateCascaderLists()))
         except socket.error:
             errorDialog('Error Connecting', 'Failed to connect to server')
             self.Close()
@@ -115,6 +118,20 @@ class CascadersFrame(generatedgui.GenCascadersFrame):
             self.client.startCascading(lambda: self.mCascadeStartStop.Enable())
             self.mCascadeStartStop.SetLabel('Stop Cascading')
 
+    def onCascaderDClick(self, event):
+        subject = None
+        if self.mFilterSubject.GetSelection() != 0:
+            subject = self.mFilterSubject.GetSelection()
+
+        #ask user topic, brief description
+        helpDialog = AskForHelp(self, self.subjects, subject)
+        helpDialog.ShowModal()
+
+        if helpDialog.isOk():
+
+            #ask for help with callback
+            #open message window
+            pass
     
     def onAddSubject(self, event):
         subject = self.mCascadeSubject.GetStringSelection()
