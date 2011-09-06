@@ -1,25 +1,34 @@
-'''
-Generic wrapper around the functions that the server provides, this 
-tries to pull some of the bulk out of the gui classes
-
-This requires wx, so that it can dispatch the events to the wx thread
-'''
-
 import rpyc
-import wx
+import wx #just used for wx.CallAfter
 
 class RpcClient:
+    '''
+    Wrapper around the functions that the server provides, this tries to pull
+    some of the bulk and extra lines of code out of the gui classes 
+
+    This requires wx, so that it can dispatch the events to the wx thread, 
+    if we don't do this the GUI (obviosuly) breaks really badly.
+    '''
     def __init__(self, host, port, username, computerHostname):
-        #does raise exceptions when cannot connect, 
+        #Nb: does raise exceptions when cannot connect, 
         self.conn = rpyc.connect(host, port)
+
+        #this watches on ANOTHER THREAD for incomming data.
         bgsrv = rpyc.BgServingThread(self.conn)
   
         try:
-            self.user = self.conn.root.userJoin(username, computerHostname, lambda: None)
+            self.user = self.conn.root.userJoin(username,
+                                                computerHostname,
+                                                lambda: None)
         except ValueError:
             self.conn.close()
             self.conn = None
             raise
+
+    def _addCallback(resource, callback):
+        ''' Safe way of calling back to the wx thread '''
+        if callback is not None:
+            resource.add_callback(lambda *args: wx.CallAfter(callback, *args))
 
     #--------------------------------------------------------------------------
     # simple functions used on startup
@@ -29,19 +38,17 @@ class RpcClient:
 
     def getSubjectList(self, callback):
         res = rpyc.async(self.user.getSubjectList)()
-        res.add_callback(lambda *args: wx.CallAfter(callback, *args))
+        self._addCallback(resource, callback)
 
     #--------------------------------------------------------------------------
     # cascading related 
     def startCascading(self, callback=None):
         res = rpyc.async(self.user.startCascading)()
-        if callback is not None:
-            res.add_callback(lambda *args: wx.CallAfter(callback, *args))
+        self._addCallback(resource, callback)
 
     def stopCascading(self, callback=None):
         res = rpyc.async(self.user.stopCascading)()
-        if callback is not None:
-            res.add_callback(lambda *args: wx.CallAfter(callback, *args))
+        self._addCallback(resource, callback)
 
     def addSubjects(self, subjects):
         rpyc.async(self.user.addSubjects)(subjects)
@@ -54,5 +61,4 @@ class RpcClient:
     def askForHelp(self, helpid, username, subject, problem, callback=None):
         res = rpyc.async(self.user.askForHelp)(helpid, username,
                                                subject, problem)
-        if callback is not None:
-            res.add_callback(lambda *args: wx.CallAfter(callback, *args))
+        self._addCallback(resource, callback)
