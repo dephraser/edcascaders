@@ -25,7 +25,7 @@ class RpcClient:
             self.conn = None
             raise
 
-    def _addCallback(resource, callback):
+    def _addCallback(self, resource, callback):
         ''' Safe way of calling back to the wx thread '''
         if callback is not None:
             resource.add_callback(lambda *args: wx.CallAfter(callback, *args))
@@ -34,21 +34,21 @@ class RpcClient:
     # simple functions used on startup
     def getCascaderList(self, callback):
         res = rpyc.async(self.user.getCascaderList)()
-        res.add_callback(lambda *args: wx.CallAfter(callback, *args))
+        self._addCallback(res, callback)
 
     def getSubjectList(self, callback):
         res = rpyc.async(self.user.getSubjectList)()
-        self._addCallback(resource, callback)
+        self._addCallback(res, callback)
 
     #--------------------------------------------------------------------------
     # cascading related 
     def startCascading(self, callback=None):
         res = rpyc.async(self.user.startCascading)()
-        self._addCallback(resource, callback)
+        self._addCallback(res, callback)
 
     def stopCascading(self, callback=None):
         res = rpyc.async(self.user.stopCascading)()
-        self._addCallback(resource, callback)
+        self._addCallback(res, callback)
 
     def addSubjects(self, subjects):
         rpyc.async(self.user.addSubjects)(subjects)
@@ -61,4 +61,4 @@ class RpcClient:
     def askForHelp(self, helpid, username, subject, problem, callback=None):
         res = rpyc.async(self.user.askForHelp)(helpid, username,
                                                subject, problem)
-        self._addCallback(resource, callback)
+        self._addCallback(res, callback)
