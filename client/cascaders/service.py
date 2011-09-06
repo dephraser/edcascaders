@@ -32,6 +32,9 @@ class RpcService(rpyc.Service):
         '''
         pass
 
+    def exposed_userSentMessage(self, helpid, message):
+        pass
+
     #--------------------------------------------------------------------------
     
     def exposed_cascaderJoined(self, username, hostname, subjects):
