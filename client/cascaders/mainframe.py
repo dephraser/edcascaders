@@ -68,6 +68,7 @@ class CascadersFrame(generatedgui.GenCascadersFrame):
                                            5010,
                                            logname,
                                            socket.gethostname())
+
             self.client.getSubjectList(lambda s: (setattr(self, 'subjects', s.value), self.updateAllSubjects()))
             self.client.getCascaderList(lambda c: (setattr(self, 'cascaders', c.value), self.updateCascaderLists()))
         except socket.error:
@@ -94,6 +95,8 @@ class CascadersFrame(generatedgui.GenCascadersFrame):
         Cleans the list and updates the list of cascaders avaible. Call
         when filters have been changed
         '''
+        debug('Cascaders: %s' % [u for u, h, s in self.cascaders])
+
         self.mFilteredCascaderList.Clear()
 
         for username, hostname, subjects in self.cascaders:
