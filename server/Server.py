@@ -30,6 +30,12 @@ class UserToken(object):
         tokens[user]=self
     
     def exposed_logout(self):
+        '''
+        Automatically called when the client disconnects
+
+        Cleans up after itself and will remove the information from the local lists
+        '''
+
         if self.stale:
             return
         self.stale = True
@@ -37,57 +43,130 @@ class UserToken(object):
         del tokens[self.user] 
         
     def exposed_startCascading(self):
-        #Add the user to active cascaders list
+        '''
+        Called by the client when the user wants to start cascading
+
+        It will also envoke cascaderJoined in all the clients connected to let them
+        know that the user has started cascading and to update their local lists
+        '''
+
         self.cascading = True
+        with data_lock:
+            #Need to inform all other clients that this cascader has joined
+            for value in tokens.itervalues():
+                #This a remote procedure call to the client
+                value._conn.root.cascaderJoined(self.user, self.hostname, \
+                        self.subjects)
         logging.info(self.user + " has started cascading")
 
     def exposed_stopCascading(self):
-        #Remove the user from the active cascaders list
+        '''
+        Call by the client when the user wants to stop cascading
+
+        It will also envoke cascaderLeft on all of the clients connected to let 
+        them know to update their local lists
+        '''
+
         self.cascading = False
+        with data_lock:
+            for value in tokens.itervalues():
+                value._conn.cascaderLeft(self.user)
         logging.info(self.user + " has stopped cascading")
 
     def exposed_addSubjects(subjects):
-        #add the array of subjects to the users cascading list
+        '''
+        Called by the client when the user adds some subjects to their collections
+
+        It will also envoke casscaderAddedSubjects on all clients connected to 
+        notify them and so they can update their local lists
+        '''
+
         with data_lock:
             self.subjects.extend(subjects)
+            for value in tokens.itervalues():
+                value._conn.root.cascaderAddedSubjects(self.user, subjects)
         logging.info(self.user + " added " + subjects + " to their subject list")
 
     def exposed_removeSubjects(subjects):
-        #remove the subjects from the users cascading list
+        '''
+        Called by the client when the user removes some subjects from their 
+        collection
+
+        It will also envoke cascaderRemovedSubjects on all clients connected to 
+        notify them and so they can update their local lists
+        '''
+
         with data_lock:
             for subject in subjects: self.subjects.remove(subject)
+            for value in tokens.itervalues():
+                value._conn.root.cascadersRemovedSubjects(self.user, subjects)
         logging.info(self.user + " removed " + subjects + " from their list")
 
     def exposed_getCascaderList(self):
-        #Return the list of cascaders and their subjects
+        '''
+        Called by the client requesting a list of the current cascaders operating
+        with their usernames, hostnames and the subjects they are cascading on.
+
+        Will return a list of 3 item tuples, each with the username and hostname as
+        string and the list of subjects as a list
+        '''
+
         with data_lock:
-            returnvalue = [ (value.user, value.hostname , value.subjects) for value in tokens.itervalues() if value.cascading]
+            returnvalue = [ (value.user, value.hostname , value.subjects) for \
+                    value in tokens.itervalues() if value.cascading]
         logging.info(self.user + " asked for the cascader list")
         return returnvalue
     
-    def exposed_getSubjectList(self): #Return the list of allowed subjects
+    def exposed_getSubjectList(self):
+        '''
+        Called by the client requesting a list of the current subjects that can 
+        be cascaded
+
+        Will return as a list
+        '''
+
         logging.info(self.user + " asked for the subject list")
         return subjectList
 
-    def exposed_askForHelp(helpId, username, subject, problem, self):
-        #Ask the user specified in username for help
-        pass
+    def exposed_askForHelp(helpId, username, subject, problem):
+        '''
+        Called when the client is asking another user for help
 
-    def exposed_acceptHelp(helpId, self):
-        #The cascader wants to help
-        pass
+        This will call a function on the client that the user who the help is being
+        requested from (userAskingForHelp) and return the result of this function 
+        to the user who called it in the first place
 
-    def exposed_rejectHelp(helpId, message, self):
-        #The cascader doesn't want to help
-        pass
+        The helpId variable is generated by the client and should just be passed on
+        '''
+
+        logging.info(self.user + " asked " + username + " for help on " + problem + \
+                " in the subject " + subject)
+        return tokens[username]._conn.root.userAskingForHelp(helpId, self.user, \
+                subject, problem) 
 
     def exposed_sendMessage(helpId, toUser, message, self):
-        #Send a message to the user
+        '''
+        Called when the client is wanting to send a message to another client
+
+        This will call a local function on the clients instance on the server
+        which will send the message down
+
+        HelpId is generated by the client and should just be passed on
+        '''
+
         tokens[toUser].message(helpId, message, self)
 
     def message(helpId, message, self):
-        #Send a message to the client connected
-        self._conn.root.function(helpId, message)
+        '''
+        Called when some other client on the server wants to send a message to 
+        the client respective to this object
+
+        Calls a function on the client connected
+
+        helpID is generated by the client and should just be passed on
+        '''
+
+        self._conn.root.userSentMessage(helpId, message)
 
 class ChatService(Service):
     
