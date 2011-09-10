@@ -13,7 +13,6 @@ import gtk
 import gtk.glade
 import gobject
 
-import generatedgui
 import client
 from locator import Locator
 from askdialog import AskForHelp
