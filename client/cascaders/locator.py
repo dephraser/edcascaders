@@ -8,7 +8,7 @@ import ConfigParser as configparser
 class Locator():
 
     def __init__(self, fileHandle):
-        self.hosts = configparser.ConfigParser(allow_no_value=True)
+        self.hosts = configparser.ConfigParser()
         self.hosts.readfp(fileHandle)
 
         self.hostsLab = {}
