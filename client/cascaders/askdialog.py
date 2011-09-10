@@ -39,6 +39,8 @@ class AskForHelp:
 
         self.ok = False
 
+        self.window.run()
+
     def onCancel(self, event):
         self.window.destroy()
 

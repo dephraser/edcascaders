@@ -22,6 +22,10 @@ from util import getComboBoxText, initTreeView, errorDialog
 
 DEBUG = True
 
+import time
+def generateUnqiueId():
+    return str(time.time())
+
 class CascadersFrame:
     def onTrayMenu(self, icon, btn, time):
         menu = gtk.Menu()
@@ -114,6 +118,7 @@ class CascadersFrame:
                          ' this only runs on Linux at the moment'))
             #can't destroy the window as it leads to an exception
             sys.exit(1) 
+        self.logname = logname
         self.builder.get_object('lbUsername').set(logname)
 
         try:
@@ -212,8 +217,9 @@ class CascadersFrame:
         helpDialog = AskForHelp(self, self.subjects, subject)
 
         if helpDialog.isOk():
-            helpid = 1 #FIXME
-            self.client.askForHelp(helpId,
+            debug('Dialog is ok, asking for help')
+            helpid = (self.logname, generateUnqiueId())
+            self.client.askForHelp(helpid,
                                    cascaderUsername,
                                    helpDialog.getSubject(),
                                    helpDialog.getDescription())
