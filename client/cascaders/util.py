@@ -3,6 +3,8 @@ This is a bit messy, but this is a set of utility functions
 '''
 import gtk 
 
+from logging import error
+
 def errorDialog(msg):
         error(msg)
         md = gtk.MessageDialog(None, 
