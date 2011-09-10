@@ -14,6 +14,7 @@ import gtk.glade
 import gobject
 
 import client
+import service
 from locator import Locator
 from askdialog import AskForHelp
 
@@ -63,23 +64,20 @@ class CascadersFrame:
 
 
     def initService(self):
-        service = self.service = service.RpcService()
+        s = self.service = service.RpcService()
 
-        #service.registerOnCascaderRemovedSubjects
-        #service.registerOnCascaderAddedSubjects
+        #s.registerOnCascaderRemovedSubjects
+        #s.registerOnCascaderAddedSubjects
 
-        #service.registerOnCascaderJoined
-        #service.registerOnCascaderLeft
+        #s.registerOnCascaderJoined
+        #s.registerOnCascaderLeft
 
-        #service.registerUserAskingForHelp
-
-        return service
-    
+        #s.registerUserAskingForHelp
 
     #--------------------------------------------------------------------------
     # Connection stuff
 
-    def initConnection(self, service):
+    def initConnection(self):
         ''' called in the constructor. also does the setup post connect '''
 
         debug('Connecting...')
@@ -96,7 +94,8 @@ class CascadersFrame:
         self.builder.get_object('lbUsername').set(logname)
 
         try:
-            self.client = client.RpcClient('localhost',
+            self.client = client.RpcClient(self.service,
+                                           'localhost',
                                            5010,
                                            logname,
                                            socket.gethostname())
