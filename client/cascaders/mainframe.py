@@ -94,7 +94,7 @@ class CascadersFrame:
         self.builder.get_object('lbUsername').set(logname)
 
         try:
-            self.client = client.RpcClient(self.service,
+            self.client = client.RpcClient(lambda b:self.service,
                                            'localhost',
                                            5010,
                                            logname,
@@ -149,7 +149,6 @@ class CascadersFrame:
 
         ls = self.builder.get_object('lsCascList')
         ls.clear()
-        ls.append(['Yaocby'])
 
         cbSubjects = self.builder.get_object('cbFilterSubject')
         cbLabs = self.builder.get_object('cbFilterLab')
