@@ -14,11 +14,14 @@ class Locator():
         self.hostsLab = {}
         for lab in self.hosts.sections():
             for hostname, v in self.hosts.items(lab):
-                self.hostsLab[hostname] = lab
+                self.hostsLab[hostname + '.inf.ed.ac.uk'] = lab
 
     def getLabs(self):
         return self.hosts.sections()
 
     def labFromHostname(self,hostname):
-        return self.hostsLab[hostname]
+        try:
+            return self.hostsLab[hostname]
+        except KeyError:
+            return None
 

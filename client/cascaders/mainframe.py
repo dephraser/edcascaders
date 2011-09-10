@@ -20,6 +20,8 @@ from askdialog import AskForHelp
 
 from util import getComboBoxText, initTreeView, errorDialog
 
+DEBUG = True
+
 class CascadersFrame:
     def onTrayMenu(self, icon, btn, time):
         menu = gtk.Menu()
@@ -102,6 +104,11 @@ class CascadersFrame:
 
         try:
             logname = os.environ['LOGNAME']
+            
+            #for debugging only, means multiple clients can be run at once
+            if DEBUG:
+                import random
+                logname = str(random.random())
         except KeyError:
             errorDialog(('Couldn\'t get LOGNAME from the enviroment,'
                          ' this only runs on Linux at the moment'))
@@ -169,9 +176,10 @@ class CascadersFrame:
         cbSubjects = self.builder.get_object('cbFilterSubject')
         cbLabs = self.builder.get_object('cbFilterLab')
         for username, hostname, subjects in self.cascaders:
-            lab = self.locator.getLabFromHostname(hostname)
+            lab = self.locator.labFromHostname(hostname)
 
-            if getComboBoxText(cbSubjects) in ['All'] + subjects:
+            filterSub = getComboBoxText(cbSubjects)
+            if filterSub in subjects or filterSub == 'All':
                 if getComboBoxText(cbLabs) in ['All', lab]:
                     ls.append([username])
 
@@ -188,7 +196,7 @@ class CascadersFrame:
         else:
             debug('Starting Cascading')
             self.cascading = True
-            self.client.stopCascading(lambda *a: btn.set_sensitive(True))
+            self.client.startCascading(lambda *a: btn.set_sensitive(True))
             btn.set_label('Stop Cascading')
 
     def onCascaderClick(self, tv, event):

@@ -19,6 +19,7 @@ formmatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
 
 handler.setFormatter(formmatter)
 logger.addHandler(handler)
+logger.addHandler(logging.StreamHandler())
 
 
 
@@ -64,12 +65,13 @@ class UserToken(object):
         '''
 
         self.cascading = True
-        with data_lock:
-            #Need to inform all other clients that this cascader has joined
-            for value in tokens.itervalues():
-                #This a remote procedure call to the client
-                value._conn.root.cascaderJoined(self.user, self.hostname, \
-                        self.subjects)
+        #logger.info(self.user + " is going to start cascading")
+        #with data_lock:
+        #    #Need to inform all other clients that this cascader has joined
+        #    for value in tokens.itervalues():
+        #        #This a remote procedure call to the client
+        #        value._conn.root.cascaderJoined(self.user, self.hostname, \
+        #                self.subjects)
         logger.info(self.user + " has started cascading")
 
     def exposed_stopCascading(self):
