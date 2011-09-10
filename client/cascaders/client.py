@@ -9,9 +9,9 @@ class RpcClient:
     This requires wx, so that it can dispatch the events to the wx thread, 
     if we don't do this the GUI (obviosuly) breaks really badly.
     '''
-    def __init__(self, host, port, username, computerHostname):
+    def __init__(self, service, host, port, username, computerHostname):
         #Nb: does raise exceptions when cannot connect, 
-        self.conn = rpyc.connect(host, port)
+        self.conn = rpyc.connect(host, port, service = service)
 
         try:
             self.user = self.conn.root.userJoin(username,

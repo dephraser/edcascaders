@@ -46,6 +46,7 @@ class CascadersFrame:
         cb.pack_start(cell, True)
         cb.add_attribute(cell, 'text', 0)
 
+        self.initService()
         self.initConnection()
 
     def initGui(self):
@@ -62,10 +63,24 @@ class CascadersFrame:
         self.window.show_all()
 
 
+    def initService(self):
+        service = self.service = service.RpcService()
+
+        #service.registerOnCascaderRemovedSubjects
+        #service.registerOnCascaderAddedSubjects
+
+        #service.registerOnCascaderJoined
+        #service.registerOnCascaderLeft
+
+        #service.registerUserAskingForHelp
+
+        return service
+    
+
     #--------------------------------------------------------------------------
     # Connection stuff
 
-    def initConnection(self):
+    def initConnection(self, service):
         ''' called in the constructor. also does the setup post connect '''
 
         debug('Connecting...')
