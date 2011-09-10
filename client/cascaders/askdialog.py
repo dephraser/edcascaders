@@ -2,9 +2,12 @@
 Functionality for the Ask for Help dialog
 '''
 
-import generatedgui
+import gtk
+import gobject
 
-class AskForHelp(generatedgui.GenAskForHelp):
+from util import getComboBoxText
+
+class AskForHelp:
     '''
     Core functionality for the ask for help box, this is designed to be shown
     with ShowModal rather than show
@@ -14,19 +17,30 @@ class AskForHelp(generatedgui.GenAskForHelp):
         subjects - List of all subjects
         currentSubject - The subject that should be selected by default
         '''
-        generatedgui.GenAskForHelp.__init__(self, parent)
+        self.builder = gtk.Builder()
+        self.root = self.builder.add_from_file('gui/askforhelp.glade')
+
+        self.window = self.builder.get_object('dgAskForHelp')
+        self.builder.connect_signals(self)
+
+        self.window.show_all()
+
+        cb = self.builder.get_object('cbSubject')
+        ls = gtk.ListStore(gobject.TYPE_STRING)
+        cb.set_model(ls)
+        for i,subject in enumerate(subjects):
+            ls.append([subject])
+            if subject == currentSubject:
+                cb.set_active(i)
+
+        cell = gtk.CellRendererText()
+        cb.pack_start(cell, True)
+        cb.add_attribute(cell, 'text', 0)
+
         self.ok = False
 
-        self.mSubject.Clear()
-        for subject in subjects:
-            self.mSubject.Append(subject)
-
-        if currentSubject:
-            index = self.mSubject.FindString(currentSubject)
-            self.mSubject.SetSelection(index)
-
     def onCancel(self, event):
-        self.Close()
+        self.window.destroy()
 
     def onOk(self, event):
         if not self.isValid():
@@ -34,7 +48,7 @@ class AskForHelp(generatedgui.GenAskForHelp):
             pass
         else:
             self.ok = True
-            self.Close()
+            self.window.destroy()
 
     def isValid(self):
         '''
@@ -53,7 +67,7 @@ class AskForHelp(generatedgui.GenAskForHelp):
         return self.ok
 
     def getSubject(self):
-        return self.mSubject.GetStringSelection()
+        return getComboBoxText(self.builder.get_object('cbSubject'))
 
     def getDescription(self):
-        return self.mDescription.GetValue()
+        return self.builder.get_object('cbDesc').get_text()

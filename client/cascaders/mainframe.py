@@ -18,30 +18,11 @@ import client
 from locator import Locator
 from askdialog import AskForHelp
 
-def errorDialog(msg):
-        error(msg)
-        md = gtk.MessageDialog(None, 
-                               gtk.DIALOG_DESTROY_WITH_PARENT, gtk.MESSAGE_ERROR, 
-                               gtk.BUTTONS_CLOSE, msg)
-        md.run()
-        md.destroy()
-
-def getComboBoxText(cb):
-    model = cb.get_model()
-    itr = cb.get_active_iter()
-    return model.get_value(itr, 0)
-
-def initTreeView(tv):
-    column = gtk.TreeViewColumn()
-    cell = gtk.CellRendererText()
-    column.pack_start(cell)
-    column.add_attribute(cell,'text',0)
-    tv.append_column(column)
+from util import getComboBoxText, initTreeView, errorDialog
 
 class CascadersFrame:
     def __init__(self):
         self.initGui()
-
 
         self.client = None
 
@@ -67,23 +48,12 @@ class CascadersFrame:
 
         self.initConnection()
 
-        #self.mFilterLab.Clear()
-        #self.mFilterLab.Append('All')
-        #for lab in self.locator.getLabs():
-        #    self.mFilterLab.Append(lab)
-        #self.mFilterLab.SetSelection(0)
-
-        #self.mFilteredCascaderList.Append('yacoby')
-
-        #self.connect()
-
     def initGui(self):
         self.builder = gtk.Builder()
         self.root = self.builder.add_from_file('gui/main.glade')
 
         initTreeView(self.builder.get_object('tvCascList'))
         initTreeView(self.builder.get_object('tvCascSubjects'))
-
 
         self.window = self.builder.get_object('wnCascader')
         self.window.connect('destroy', lambda *a: gtk.main_quit())
@@ -166,6 +136,7 @@ class CascadersFrame:
 
         ls = self.builder.get_object('lsCascList')
         ls.clear()
+        ls.append(['Yaocby'])
 
         cbSubjects = self.builder.get_object('cbFilterSubject')
         cbLabs = self.builder.get_object('cbFilterLab')
@@ -192,15 +163,17 @@ class CascadersFrame:
             self.client.stopCascading(lambda *a: btn.set_sensitive(True))
             btn.set_label('Stop Cascading')
 
-    def onCascaderDClick(self, event):
-        cascaderUsername = event.GetString()
+    def onCascaderClick(self, tv, event):
+        if event.button != 1 or event.type != gtk.gdk._2BUTTON_PRESS:
+            return
+        model, itr = tv.get_selection().get_selected()
+        cascaderUsername = model.get_value(itr, 0)
         
         #ask user topic, brief description
         subject = None
-        if self.mFilterSubject.GetSelection() != 0:
-            subject = self.mFilterSubject.GetSelection()
+        if getComboBoxText(self.builder.get_object('cbFilterSubject')) != 'All':
+            subject = getComboBoxText(self.builder.get_object('cbFilterSubject'))
         helpDialog = AskForHelp(self, self.subjects, subject)
-        helpDialog.ShowModal()
 
         if helpDialog.isOk():
             helpid = 1 #FIXME
@@ -226,7 +199,6 @@ class CascadersFrame:
     def onRemoveSubject(self, event):
         tv = self.builder.get_object('tvCascSubjects')
         model, itr = tv.get_selection().get_selected()
-
         subject = model.get_value(itr, 0)
 
         if subject and subject in self.cascadeSubjects:

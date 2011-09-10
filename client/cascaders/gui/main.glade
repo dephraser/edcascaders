@@ -1,9 +1,14 @@
 <?xml version="1.0"?>
 <interface>
-  <requires lib="gtk+" version="2.16"/>
+  <!-- interface-requires gtk+ 2.12 -->
   <!-- interface-naming-policy project-wide -->
-  <object class="GtkListStore" id="lsCascList"/>
   <object class="GtkListStore" id="lsCascSubjects">
+    <columns>
+      <!-- column-name gchararray1 -->
+      <column type="gchararray"/>
+    </columns>
+  </object>
+  <object class="GtkListStore" id="lsCascList">
     <columns>
       <!-- column-name gchararray1 -->
       <column type="gchararray"/>
@@ -200,6 +205,7 @@
                         <property name="visible">True</property>
                         <property name="can_focus">True</property>
                         <property name="model">lsCascList</property>
+                        <signal name="button_press_event" handler="onCascaderClick"/>
                       </object>
                       <packing>
                         <property name="position">1</property>
