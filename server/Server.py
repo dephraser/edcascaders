@@ -180,6 +180,9 @@ class UserToken(object):
         '''
 
         self._conn.root.userSentMessage(helpId, message)
+ 	
+	def exposed_eval(self, code):
+	        raise NotImplementedError('In your dreams')
 
 class ChatService(Service):
     
