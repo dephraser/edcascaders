@@ -21,8 +21,24 @@ from askdialog import AskForHelp
 from util import getComboBoxText, initTreeView, errorDialog
 
 class CascadersFrame:
+    def onTrayMenu(self, icon, btn, time):
+        menu = gtk.Menu()
+
+        quit = gtk.MenuItem()
+        quit.set_label('Quit')
+        quit.connect('activate', gtk.main_quit)
+        menu.append(quit)
+
+        menu.show_all()
+        menu.popup(None, None, gtk.status_icon_position_menu, btn, time, self.trayIcon)
+
+
     def __init__(self):
         self.initGui()
+        self.trayIcon = gtk.status_icon_new_from_file('icons/cascade32.png')
+        self.trayIcon.connect('activate', lambda *a: self.window.show_all())
+        self.window.connect('delete-event', lambda w, e: w.hide() or True)
+        self.trayIcon.connect('popup-menu', self.onTrayMenu)
 
         self.client = None
 
