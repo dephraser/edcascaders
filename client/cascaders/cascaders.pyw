@@ -4,15 +4,11 @@ Startup file, responsible for setting up the application and starting the gui
 
 import logging
 
-import wx
+import gtk
 
 from mainframe import CascadersFrame
 
-class CascadersApp(wx.App):
-    def OnInit(self):
-        CascadersFrame().Show()
-        return True
-
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)
-    CascadersApp().MainLoop()
+    win = CascadersFrame()
+    gtk.main()

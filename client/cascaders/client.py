@@ -1,5 +1,5 @@
 import rpyc
-import wx #just used for wx.CallAfter
+import gtk
 
 class RpcClient:
     '''
@@ -13,9 +13,6 @@ class RpcClient:
         #Nb: does raise exceptions when cannot connect, 
         self.conn = rpyc.connect(host, port)
 
-        #this watches on ANOTHER THREAD for incomming data.
-        bgsrv = rpyc.BgServingThread(self.conn)
-  
         try:
             self.user = self.conn.root.userJoin(username,
                                                 computerHostname,
@@ -26,9 +23,9 @@ class RpcClient:
             raise
 
     def _addCallback(self, resource, callback):
-        ''' Safe way of calling back to the wx thread '''
+        ''' Safe way of calling back to the gtk thread '''
         if callback is not None:
-            resource.add_callback(lambda *args: wx.CallAfter(callback, *args))
+            resource.add_callback(callback)
 
     #--------------------------------------------------------------------------
     # simple functions used on startup

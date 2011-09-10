@@ -6,25 +6,43 @@ It doesn't handle any functionality outside the frame such as messaging
 '''
 from logging import debug, error
 import os
+import sys
 import socket
 
-import wx
+import gtk
+import gtk.glade
+import gobject
 
 import generatedgui
 import client
 from locator import Locator
 from askdialog import AskForHelp
 
-def errorDialog(title, msg):
-        error('%s - %s' % (title, msg))
-        wx.MessageDialog(None,
-                         msg,
-                         title,
-                         style=wx.OK|wx.ICON_ERROR).ShowModal()
+def errorDialog(msg):
+        error(msg)
+        md = gtk.MessageDialog(None, 
+                               gtk.DIALOG_DESTROY_WITH_PARENT, gtk.MESSAGE_ERROR, 
+                               gtk.BUTTONS_CLOSE, msg)
+        md.run()
+        md.destroy()
 
-class CascadersFrame(generatedgui.GenCascadersFrame):
+def getComboBoxText(cb):
+    model = cb.get_model()
+    itr = cb.get_active_iter()
+    return model.get_value(itr, 0)
+
+def initTreeView(tv):
+    column = gtk.TreeViewColumn()
+    cell = gtk.CellRendererText()
+    column.pack_start(cell)
+    column.add_attribute(cell,'text',0)
+    tv.append_column(column)
+
+class CascadersFrame:
     def __init__(self):
-        generatedgui.GenCascadersFrame.__init__(self, None)
+        self.initGui()
+
+
         self.client = None
 
         self.subjects  = []
@@ -36,32 +54,62 @@ class CascadersFrame(generatedgui.GenCascadersFrame):
 
         self.locator = Locator(open('./data/hosts'))
 
-        self.mFilterLab.Clear()
-        self.mFilterLab.Append('All')
+        lst = gtk.ListStore(gobject.TYPE_STRING)
+        lst.append(['All'])
         for lab in self.locator.getLabs():
-            self.mFilterLab.Append(lab)
-        self.mFilterLab.SetSelection(0)
+            lst.append([lab])
+        cb = self.builder.get_object('cbFilterLab')
+        cb.set_model(lst)
+        cell = gtk.CellRendererText()
+        cb.set_active(0)
+        cb.pack_start(cell, True)
+        cb.add_attribute(cell, 'text', 0)
 
-        self.mFilteredCascaderList.Append('yacoby')
+        self.initConnection()
 
-        self.connect()
+        #self.mFilterLab.Clear()
+        #self.mFilterLab.Append('All')
+        #for lab in self.locator.getLabs():
+        #    self.mFilterLab.Append(lab)
+        #self.mFilterLab.SetSelection(0)
+
+        #self.mFilteredCascaderList.Append('yacoby')
+
+        #self.connect()
+
+    def initGui(self):
+        self.builder = gtk.Builder()
+        self.root = self.builder.add_from_file('gui/main.glade')
+
+        initTreeView(self.builder.get_object('tvCascList'))
+        initTreeView(self.builder.get_object('tvCascSubjects'))
+
+
+        self.window = self.builder.get_object('wnCascader')
+        self.window.connect('destroy', lambda *a: gtk.main_quit())
+        self.builder.connect_signals(self)
+
+        self.window.show_all()
+
 
     #--------------------------------------------------------------------------
     # Connection stuff
 
-    def connect(self):
+    def initConnection(self):
         ''' called in the constructor. also does the setup post connect '''
 
         debug('Connecting...')
-        self.mStatus.SetLabel('Connecting...')
+        status = self.builder.get_object('lbStatus')
+        status.set('Connecting...')
 
         try:
             logname = os.environ['LOGNAME']
         except KeyError:
-            errorDialog('Couldn\'t get user name',
-                          ('Couldn\'t get LOGNAME from the enviroment,'
-                           ' this only runs on Linux at the moment'))
-        self.mUserName.SetLabel(logname)
+            errorDialog(('Couldn\'t get LOGNAME from the enviroment,'
+                         ' this only runs on Linux at the moment'))
+            #can't destroy the window as it leads to an exception
+            sys.exit(1) 
+        self.builder.get_object('lbUsername').set(logname)
 
         try:
             self.client = client.RpcClient('localhost',
@@ -72,23 +120,42 @@ class CascadersFrame(generatedgui.GenCascadersFrame):
             self.client.getSubjectList(lambda s: (setattr(self, 'subjects', s.value), self.updateAllSubjects()))
             self.client.getCascaderList(lambda c: (setattr(self, 'cascaders', c.value), self.updateCascaderLists()))
         except socket.error:
-            errorDialog('Error Connecting', 'Failed to connect to server')
-            self.Close()
+            errorDialog('Failed to connect to server')
+            sys.exit(1)
 
-        self.mStatus.SetLabel('Connected')
+        gobject.io_add_watch(self.client.conn, gobject.IO_IN, self.bgServer)
+        status.set('Connected')
 
+    def bgServer(self, source = None, cond = None):
+        if self.client.conn:
+            self.client.conn.poll_all()
+            return True
+        else:
+            return False
     #--------------------------------------------------------------------------
     def updateAllSubjects(self):
         debug('Subjects: %s' % self.subjects)
-        self.mCascadeSubject.Clear()
-        for subject in self.subjects:
-            self.mCascadeSubject.Append(subject)
 
-        self.mFilterSubject.Clear()
-        self.mFilterSubject.Append('All')
-        for subject in self.subjects:
-            self.mFilterSubject.Append(subject)
-        self.mFilterSubject.SetSelection(0)
+        cascCb = self.builder.get_object('cbCascSubjectList')
+        lst = gtk.ListStore(gobject.TYPE_STRING)
+        for s in self.subjects:
+            lst.append([s])
+        cascCb.set_model(lst)
+        cell = gtk.CellRendererText()
+        cascCb.set_active(0)
+        cascCb.pack_start(cell, True)
+        cascCb.add_attribute(cell, 'text', 0)
+
+        cb = self.builder.get_object('cbFilterSubject')
+        lst = gtk.ListStore(gobject.TYPE_STRING)
+        lst.append(['All'])
+        for s in self.subjects:
+            lst.append([s])
+        cb.set_model(lst)
+        cell = gtk.CellRendererText()
+        cb.set_active(0)
+        cb.pack_start(cell, True)
+        cb.add_attribute(cell, 'text', 0)
 
     def updateCascaderLists(self):
         '''
@@ -97,29 +164,33 @@ class CascadersFrame(generatedgui.GenCascadersFrame):
         '''
         debug('Cascaders: %s' % [u for u, h, s in self.cascaders])
 
-        self.mFilteredCascaderList.Clear()
+        ls = self.builder.get_object('lsCascList')
+        ls.clear()
 
+        cbSubjects = self.builder.get_object('cbFilterSubject')
+        cbLabs = self.builder.get_object('cbFilterLab')
         for username, hostname, subjects in self.cascaders:
             lab = self.locator.getLabFromHostname(hostname)
 
-            if (self.mFilterSubjects.GetSelection() == 0 or
-                    self.mFilterSubjects.GetStringSelection() in subjects):
+            if getComboBoxText(cbSubjects) in ['All'] + subjects:
+                if getComboBoxText(cbLabs) in ['All', lab]:
+                    ls.append([username])
 
-                if (self.mFilterLab.GetSelection() == 0 or
-                        self.mFilterLab.GetStringSelection() == lab ):
-                    self.mFilteredCascaderList.Append(username)
 
     #--------------------------------------------------------------------------
     def onStartStopCascading(self, event):
-        self.mCascadeStartStop.Disable()
+        btn = self.builder.get_object('btStartStopCasc')
+        btn.set_sensitive(False)
         if self.cascading:
+            debug('Stopping Cascading')
             self.cascading = False
-            self.client.stopCascading(lambda: self.mCascadeStartStop.Enable())
-            self.mCascadeStartStop.SetLabel('Start Cascading')
+            self.client.stopCascading(lambda *a: btn.set_sensitive(True))
+            btn.set_label('Start Cascading')
         else:
+            debug('Starting Cascading')
             self.cascading = True
-            self.client.startCascading(lambda: self.mCascadeStartStop.Enable())
-            self.mCascadeStartStop.SetLabel('Stop Cascading')
+            self.client.stopCascading(lambda *a: btn.set_sensitive(True))
+            btn.set_label('Stop Cascading')
 
     def onCascaderDClick(self, event):
         cascaderUsername = event.GetString()
@@ -139,22 +210,31 @@ class CascadersFrame(generatedgui.GenCascadersFrame):
                                    helpDialog.getDescription())
     
     def onAddSubject(self, event):
-        subject = self.mCascadeSubject.GetStringSelection()
+        cb = self.builder.get_object('cbCascSubjectList')
+        ls = self.builder.get_object('lsCascSubjects')
+        subject = getComboBoxText(cb)
+
         if subject and not subject in self.cascadeSubjects:
             debug('Adding subject: %s' % subject)
-            self.mCascadeSubjectList.Append(subject)
+
+            ls.append([subject])
             self.client.addSubjects([subject])
             self.cascadeSubjects.add(subject)
+
         debug('Subjects now: %s' % self.cascadeSubjects)
     
     def onRemoveSubject(self, event):
-        subject = self.mCascadeSubjectList.GetStringSelection()
+        tv = self.builder.get_object('tvCascSubjects')
+        model, itr = tv.get_selection().get_selected()
+
+        subject = model.get_value(itr, 0)
+
         if subject and subject in self.cascadeSubjects:
             debug('Removing subject: %s' % subject)
             self.client.removeSubjects([subject])
             self.cascadeSubjects.remove(subject)
-            index = self.mCascadeSubjectList.FindString(subject)
-            self.mCascadeSubjectList.Delete(index)
+
+            model.remove(itr)
         debug('Subjects now: %s' % self.cascadeSubjects)
 
     # Filter Stuff
