@@ -84,7 +84,7 @@ class UserToken(object):
         self.cascading = False
         with data_lock:
             for value in tokens.itervalues():
-                value.conn.cascaderLeft(self.user)
+                value.conn.root.cascaderLeft(self.user)
         logger.info(self.user + " has stopped cascading")
 
     def exposed_addSubjects(self, subjects):
@@ -126,8 +126,8 @@ class UserToken(object):
         '''
 
         with data_lock:
-            returnvalue = [ (value.user, value.hostname , value.subjects) for \
-                    value in tokens.itervalues() if value.cascading]
+            returnvalue = [(value.user, value.hostname, value.subjects)
+                            for value in tokens.itervalues() if value.cascading]
         logger.info(self.user + " asked for the cascader list")
         return returnvalue
     
