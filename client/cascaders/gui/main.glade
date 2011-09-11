@@ -135,6 +135,7 @@
                     <child>
                       <object class="GtkComboBox" id="cbFilterSubject">
                         <property name="visible">True</property>
+                        <signal name="changed" handler="onFilterSubjectChange"/>
                       </object>
                       <packing>
                         <property name="expand">False</property>
@@ -169,6 +170,7 @@
                     <child>
                       <object class="GtkComboBox" id="cbFilterLab">
                         <property name="visible">True</property>
+                        <signal name="changed" handler="onFilterLabChange"/>
                       </object>
                       <packing>
                         <property name="expand">False</property>

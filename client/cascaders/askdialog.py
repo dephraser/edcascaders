@@ -72,4 +72,4 @@ class AskForHelp:
         return getComboBoxText(self.builder.get_object('cbSubject'))
 
     def getDescription(self):
-        return self.builder.get_object('cbDesc').get_text()
+        return self.builder.get_object('txDesc').get_text()

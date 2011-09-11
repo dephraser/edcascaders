@@ -88,13 +88,48 @@ class CascadersFrame:
     def initService(self):
         s = self.service = service.RpcService()
 
-        #s.registerOnCascaderRemovedSubjects
-        #s.registerOnCascaderAddedSubjects
+        s.registerOnCascaderRemovedSubjects(self.onCascaderRemovedSubjects)
+        s.registerOnCascaderAddedSubjects(self.onCascaderAddedSubjects)
 
-        #s.registerOnCascaderJoined
-        #s.registerOnCascaderLeft
+        s.registerOnCascaderJoined(self.onCascaderJoined)
+        s.registerOnCascaderLeft(self.onCascaderLeft)
 
-        #s.registerUserAskingForHelp
+        s.registerUserAskingForHelp(self.onUserAskingForHelp)
+
+    #--------------------------------------------------------------------------
+    # Connection stuff
+
+    def onUserAskingForHelp(self,  helpid, username, subject, description):
+        debug('Help: %s' % username)
+
+    def onCascaderAddedSubjects(self, username, subjects):
+        debug('Cascader %s added subjects %s' % (username, subjects))
+        for u, h, s in self.cascaders:
+            if u == username:
+                s.extend(subjects)
+        self.updateCascaderLists()
+
+    def onCascaderRemovedSubjects(self, username, subjects):
+        debug('Cascader %s removed subjects %s' % (username, subjects))
+        for u, h, s in self.cascaders.iteritems():
+            if u == username:
+                for remSubject in subjects:
+                    try:
+                        curSubjects.remove(remSubject)
+                    except ValueError:
+                        pass
+        self.updateCascaderLists()
+
+    def onCascaderJoined(self, username, hostname, subjects):
+        debug('New cascader: %s' % username)
+        self.cascaders[username] = (hostname, subjects)
+        self.updateCascaderLists()
+
+    def onCascaderLeft(self, username):
+        debug('Cascader left: %s' % username)
+        del self.cascaders[username]
+        self.updateCascaderLists()
+
 
     #--------------------------------------------------------------------------
     # Connection stuff
@@ -128,8 +163,18 @@ class CascadersFrame:
                                            logname,
                                            socket.gethostname())
 
-            self.client.getSubjectList(lambda s: (setattr(self, 'subjects', s.value), self.updateAllSubjects()))
-            self.client.getCascaderList(lambda c: (setattr(self, 'cascaders', c.value), self.updateCascaderLists()))
+            def subject(result):
+                self.subjects = [x for x in result.value]
+                self.updateAllSubjects()
+
+            def casc(result):
+                self.cascaders = {}
+                for usr, host, sub in result.value:
+                    self.cascaders[usr] = (host, sub)
+                self.updateCascaderLists()
+
+            self.client.getSubjectList(subject)
+            self.client.getCascaderList(casc)
         except socket.error:
             errorDialog('Failed to connect to server')
             sys.exit(1)
@@ -173,21 +218,20 @@ class CascadersFrame:
         Cleans the list and updates the list of cascaders avaible. Call
         when filters have been changed
         '''
-        debug('Cascaders: %s' % [u for u, h, s in self.cascaders])
+        debug('Cascaders: %s' % self.cascaders)
 
         ls = self.builder.get_object('lsCascList')
         ls.clear()
 
         cbSubjects = self.builder.get_object('cbFilterSubject')
         cbLabs = self.builder.get_object('cbFilterLab')
-        for username, hostname, subjects in self.cascaders:
+        for username, (hostname, subjects) in self.cascaders.iteritems():
             lab = self.locator.labFromHostname(hostname)
 
             filterSub = getComboBoxText(cbSubjects)
             if filterSub in subjects or filterSub == 'All':
                 if getComboBoxText(cbLabs) in ['All', lab]:
                     ls.append([username])
-
 
     #--------------------------------------------------------------------------
     def onStartStopCascading(self, event):
@@ -222,7 +266,8 @@ class CascadersFrame:
             self.client.askForHelp(helpid,
                                    cascaderUsername,
                                    helpDialog.getSubject(),
-                                   helpDialog.getDescription())
+                                   helpDialog.getDescription(),
+                                   lambda *a: debug("HELP: " + str(a)))
     
     def onAddSubject(self, event):
         cb = self.builder.get_object('cbCascSubjectList')
@@ -258,3 +303,10 @@ class CascadersFrame:
     def onLabSelect(self, event):
         self.updateCascaderLists()
     #-- -----------------------------------------------------------------------
+    def onFilterLabChange(self, evt):
+        debug('Filter Lab Changed')
+        self.updateCascaderLists()
+
+    def onFilterSubjectChange(self, evt):
+        debug('Filter Subject Changed')
+        self.updateCascaderLists()

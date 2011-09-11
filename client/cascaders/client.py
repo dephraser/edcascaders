@@ -15,8 +15,7 @@ class RpcClient:
 
         try:
             self.user = self.conn.root.userJoin(username,
-                                                computerHostname,
-                                                lambda: None)
+                                                computerHostname)
         except ValueError:
             self.conn.close()
             self.conn = None

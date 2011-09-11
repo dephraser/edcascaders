@@ -72,10 +72,7 @@
               </packing>
             </child>
             <child>
-              <placeholder/>
-            </child>
-            <child>
-              <object class="GtkEntry" id="entry1">
+              <object class="GtkEntry" id="txDesc">
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="invisible_char">&#x25CF;</property>
@@ -87,6 +84,9 @@
                 <property name="bottom_attach">3</property>
                 <property name="y_options"></property>
               </packing>
+            </child>
+            <child>
+              <placeholder/>
             </child>
           </object>
           <packing>
