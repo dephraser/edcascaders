@@ -34,14 +34,13 @@ subjectList = ["inf1-fp","inf1-cl","inf1-da","inf1-op","inf2a","inf2b","inf2c-cs
         "Version Control"]
 
 class UserToken(object):
-    def __init__(self, conn, user, hostname, callback):
+    def __init__(self, conn, user, hostname):
         self.conn = conn
         self.user = user
         self.hostname = hostname
         self.stale = False
         self.cascading = False
         self.subjects = []
-        self.callback = callback
         tokens[user]=self
     
     def exposed_logout(self):
@@ -54,7 +53,6 @@ class UserToken(object):
         if self.stale:
             return
         self.stale = True
-        self.callback = None
         del tokens[self.user] 
         
     def exposed_startCascading(self):
@@ -198,11 +196,11 @@ class ChatService(Service):
         if self.token:
             self.token.exposed_logout()
     
-    def exposed_userJoin(self, username, hostname, callback):
+    def exposed_userJoin(self, username, hostname):
         if self.token and not self.token.stale:
             raise ValueError("already logged in")
         else:
-            self.token = UserToken(self._conn, username, hostname, async(callback))
+            self.token = UserToken(self._conn, username, hostname)
             return self.token
 
 
