@@ -16,7 +16,10 @@ import gobject
 import client
 import service
 from locator import Locator
+
+from accepthelp import AcceptHelpDialog
 from askdialog import AskForHelp
+from messagedialog import MessageDialog
 
 from util import getComboBoxText, initTreeView, errorDialog
 
@@ -45,6 +48,8 @@ class CascadersFrame:
         self.trayIcon.connect('activate', lambda *a: self.window.show_all())
         self.window.connect('delete-event', lambda w, e: w.hide() or True)
         self.trayIcon.connect('popup-menu', self.onTrayMenu)
+
+        self.messageDialog = MessageDialog()
 
         self.client = None
 
@@ -86,6 +91,10 @@ class CascadersFrame:
 
 
     def initService(self):
+        '''
+        This sets up the service that the client provides to the server
+        '''
+
         s = self.service = service.RpcService()
 
         s.registerOnCascaderRemovedSubjects(self.onCascaderRemovedSubjects)
@@ -97,32 +106,45 @@ class CascadersFrame:
         s.registerUserAskingForHelp(self.onUserAskingForHelp)
 
     #--------------------------------------------------------------------------
-    # Connection stuff
 
     def onUserAskingForHelp(self,  helpid, username, subject, description):
         debug('Help: %s' % username)
 
+        d = AcceptHelpDialog(username, subject, description)
+
+        #check if user can give help
+        if d.isAccept():
+            debug('Accepted')
+            self.service.registerOnMessgeHandler(helpid, function)
+            return (True, '')
+        debug('Rejected')
+        return (False, '')
+
     def onCascaderAddedSubjects(self, username, subjects):
         debug('Cascader %s added subjects %s' % (username, subjects))
-        for u, h, s in self.cascaders:
-            if u == username:
-                s.extend(subjects)
+        host, curSubjects = self.cascaders[username]
+        self.cascaders[username] = (host, curSubjects + subjects)
         self.updateCascaderLists()
 
     def onCascaderRemovedSubjects(self, username, subjects):
         debug('Cascader %s removed subjects %s' % (username, subjects))
-        for u, h, s in self.cascaders.iteritems():
-            if u == username:
-                for remSubject in subjects:
-                    try:
-                        curSubjects.remove(remSubject)
-                    except ValueError:
-                        pass
+        try: 
+            host, curSubjects = self.cascaders[username]
+            for remSubject in subjects:
+                try:
+                    curSubjects.remove(remSubject)
+                except ValueError:
+                    pass
+        except KeyError:
+            pass
         self.updateCascaderLists()
 
     def onCascaderJoined(self, username, hostname, subjects):
         debug('New cascader: %s' % username)
-        self.cascaders[username] = (hostname, subjects)
+        try:
+            self.cascaders[username] = (hostname, subjects)
+        except KeyError:
+            pass
         self.updateCascaderLists()
 
     def onCascaderLeft(self, username):
@@ -183,6 +205,7 @@ class CascadersFrame:
         status.set('Connected')
 
     def bgServer(self, source = None, cond = None):
+        '''This function is called when there is data to be read in the pipe'''
         if self.client.conn:
             self.client.conn.poll_all()
             return True
@@ -225,7 +248,7 @@ class CascadersFrame:
 
         cbSubjects = self.builder.get_object('cbFilterSubject')
         cbLabs = self.builder.get_object('cbFilterLab')
-        for username, (hostname, subjects) in self.cascaders.iteritems():
+        for username, (hostname, subjects) in self.cascaders:
             lab = self.locator.labFromHostname(hostname)
 
             filterSub = getComboBoxText(cbSubjects)
@@ -267,7 +290,7 @@ class CascadersFrame:
                                    cascaderUsername,
                                    helpDialog.getSubject(),
                                    helpDialog.getDescription(),
-                                   lambda *a: debug("HELP: " + str(a)))
+                                   lambda *a: debug("HELP: " + str(a)) )
     
     def onAddSubject(self, event):
         cb = self.builder.get_object('cbCascSubjectList')

@@ -33,7 +33,7 @@ class RpcService(rpyc.Service):
 
         This is response is then passed back to the user as 
         '''
-        self.userAskingForHelp(helpId, username, subject, description)
+        return self.userAskingForHelp(helpId, username, subject, description)
 
     #--------
 
@@ -42,7 +42,7 @@ class RpcService(rpyc.Service):
 
     def exposed_userSentMessage(self, helpid, message):
         try:
-            self.messageFunctions[helpid](message)
+            return self.messageFunctions[helpid](message)
         except KeyError:
             pass
 
@@ -53,7 +53,7 @@ class RpcService(rpyc.Service):
 
     def exposed_cascaderJoined(self, username, hostname, subjects):
         ''' Called when a cascader starts cascading '''
-        self.cascaderJoined(username, hostname, subjects)
+        return self.cascaderJoined(username, hostname, subjects)
 
     #--------
 
@@ -62,7 +62,7 @@ class RpcService(rpyc.Service):
 
     def exposed_cascaderLeft(self, username):
         ''' Called when a cascader stops cascading '''
-        self.cascaderLeft(username)
+        return self.cascaderLeft(username)
 
     #--------
 
@@ -71,7 +71,7 @@ class RpcService(rpyc.Service):
 
     def exposed_cascaderAddedSubjects(self, username, newSubjects):
         ''' Called when a cascader has added subjects '''
-        self.cascaderAddedSubject(username, newSubjects)
+        return self.cascaderAddedSubject(username, newSubjects)
 
     #--------
 
@@ -80,7 +80,7 @@ class RpcService(rpyc.Service):
 
     def exposed_cascaderRemovedSubjects(self, username, removedSubjects):
         ''' Called when a cascader has removed some subjects '''
-        self.cascaderRemovedSubject(username, removedSubjects)
+        return self.cascaderRemovedSubject(username, removedSubjects)
 
     #--------
 

@@ -57,4 +57,7 @@ class RpcClient:
     def askForHelp(self, helpid, username, subject, problem, callback=None):
         res = rpyc.async(self.user.askForHelp)(helpid, username,
                                                subject, problem)
-        self._addCallback(res, callback)
+        if callback is not None:
+            #the result from this is an async result, so we need to add another
+            #callback
+            self._addCallback(res, lambda result: result.add_callback(callback))
