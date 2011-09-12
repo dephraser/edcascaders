@@ -46,8 +46,10 @@ class CascadersFrame:
         self.initGui()
         self.trayIcon = gtk.status_icon_new_from_file('icons/cascade32.png')
         self.trayIcon.connect('activate', lambda *a: self.window.show_all())
-        self.window.connect('delete-event', lambda w, e: w.hide() or True)
         self.trayIcon.connect('popup-menu', self.onTrayMenu)
+
+        #go to tray on quit
+        self.window.connect('delete-event', lambda w, e: w.hide() or True)
 
         self.messageDialog = MessageDialog()
 
@@ -60,19 +62,9 @@ class CascadersFrame:
 
         self.cascading = False
 
-        self.mapWidgets = []
         self.locator = Locator(open('./data/hosts'))
 
-        lst = gtk.ListStore(gobject.TYPE_STRING)
-        lst.append(['All'])
-        for lab in self.locator.getLabs():
-            lst.append([lab])
-        cb = self.builder.get_object('cbFilterLab')
-        cb.set_model(lst)
-        cell = gtk.CellRendererText()
-        cb.set_active(0)
-        cb.pack_start(cell, True)
-        cb.add_attribute(cell, 'text', 0)
+        self.initLabs()
 
         self.initService()
         self.initConnection()
@@ -90,6 +82,23 @@ class CascadersFrame:
 
         self.window.show_all()
 
+    def initLabs(self):
+        '''
+        Sets up the labs drop down box stuff
+        '''
+        if not hasattr(self, 'locator'):
+            raise AttributeError('initLabs depends on self.locator')
+
+        lst = gtk.ListStore(gobject.TYPE_STRING)
+        lst.append(['All'])
+        for lab in self.locator.getLabs():
+            lst.append([lab])
+        cb = self.builder.get_object('cbFilterLab')
+        cb.set_model(lst)
+        cell = gtk.CellRendererText()
+        cb.set_active(0)
+        cb.pack_start(cell, True)
+        cb.add_attribute(cell, 'text', 0)
 
     def initService(self):
         '''
@@ -382,8 +391,9 @@ class CascadersFrame:
     #-- -----------------------------------------------------------------------
 
     def renderMap(self, lab):
-        [x.destroy() for x in self.mapWidgets]
         labMap = self.builder.get_object('tblMap')
+        for x in labMap.get_children():
+            x.destroy()
         x,y = self.locator.getMapBounds(lab)
         labMap.resize(x,y)
 
@@ -392,7 +402,3 @@ class CascadersFrame:
             l.set_label(host.split('.')[0])
             l.show_all()
             labMap.attach(l, x,x+1,y,y+1)
-
-            self.mapWidgets.append(l)
-
-
