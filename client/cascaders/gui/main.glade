@@ -227,12 +227,15 @@
                     </child>
                     <child>
                       <object class="GtkTreeView" id="tvCascList">
+                        <property name="width_request">150</property>
                         <property name="visible">True</property>
                         <property name="can_focus">True</property>
                         <property name="model">lsCascList</property>
                         <signal name="button_press_event" handler="onCascaderClick"/>
                       </object>
                       <packing>
+                        <property name="expand">False</property>
+                        <property name="fill">False</property>
                         <property name="position">1</property>
                       </packing>
                     </child>
