@@ -60,6 +60,7 @@ class CascadersFrame:
 
         self.cascading = False
 
+        self.mapWidgets = []
         self.locator = Locator(open('./data/hosts'))
 
         lst = gtk.ListStore(gobject.TYPE_STRING)
@@ -367,8 +368,31 @@ class CascadersFrame:
     #-- -----------------------------------------------------------------------
     def onFilterLabChange(self, evt):
         debug('Filter Lab Changed')
+
         self.updateCascaderLists()
+
+        cbLab = self.builder.get_object('cbFilterLab')
+        lab = getComboBoxText(cbLab)
+        self.renderMap(lab)
 
     def onFilterSubjectChange(self, evt):
         debug('Filter Subject Changed')
         self.updateCascaderLists()
+
+    #-- -----------------------------------------------------------------------
+
+    def renderMap(self, lab):
+        [x.destroy() for x in self.mapWidgets]
+        labMap = self.builder.get_object('tblMap')
+        x,y = self.locator.getMapBounds(lab)
+        labMap.resize(x,y)
+
+        for host, (x,y) in self.locator.getMap(lab):
+            l = gtk.Label()
+            l.set_label(host.split('.')[0])
+            l.show_all()
+            labMap.attach(l, x,x+1,y,y+1)
+
+            self.mapWidgets.append(l)
+
+
