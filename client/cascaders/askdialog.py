@@ -1,6 +1,4 @@
-'''
-Functionality for the Ask for Help dialog
-'''
+import os
 
 import gtk
 import gobject
@@ -9,8 +7,7 @@ from util import getComboBoxText
 
 class AskForHelp:
     '''
-    Core functionality for the ask for help box, this is designed to be shown
-    with ShowModal rather than show
+    Core functionality for the ask for help box
     '''
     def __init__(self, parent, subjects, currentSubject = None):
         '''
@@ -18,7 +15,8 @@ class AskForHelp:
         currentSubject - The subject that should be selected by default
         '''
         self.builder = gtk.Builder()
-        self.root = self.builder.add_from_file('gui/askforhelp.glade')
+        dr = os.path.dirname(__file__)
+        self.builder.add_from_file(os.path.join(dr, 'gui', 'askforhelp.glade'))
 
         self.window = self.builder.get_object('dgAskForHelp')
         self.builder.connect_signals(self)

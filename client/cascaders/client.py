@@ -5,9 +5,6 @@ class RpcClient:
     '''
     Wrapper around the functions that the server provides, this tries to pull
     some of the bulk and extra lines of code out of the gui classes 
-
-    This requires wx, so that it can dispatch the events to the wx thread, 
-    if we don't do this the GUI (obviosuly) breaks really badly.
     '''
     def __init__(self, service, host, port, username, computerHostname):
         #Nb: does raise exceptions when cannot connect, 

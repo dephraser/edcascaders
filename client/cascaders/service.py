@@ -1,8 +1,14 @@
 import rpyc
 
+from logging import warn
+
 class RpcService(rpyc.Service):
     '''
     This provides the service for data sent from the server to the client
+
+    For every exposed function, there is some sort of callback registering
+    for a user of the class to get the results of functions. In most cases
+    for simplicity you can only have one callback registered
     '''
     def __init__(self):
         self.messageFunctions = {}
@@ -38,13 +44,16 @@ class RpcService(rpyc.Service):
     #--------
 
     def registerOnMessgeHandler(self, helpid, func):
+        '''
+        Register a callback for that spesific helpid
+        '''
         self.messageFunctions[helpid] = func
 
     def exposed_userSentMessage(self, helpid, message):
         try:
             return self.messageFunctions[helpid](message)
         except KeyError:
-            pass
+            warn('Message dropped as no handler (helpid: %s)' % helpid)
 
     #--------
     

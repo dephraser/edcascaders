@@ -1,3 +1,5 @@
+from logging import warn
+
 import ConfigParser as configparser
 from collections import defaultdict
 
@@ -36,6 +38,7 @@ class Locator():
         try:
             return self.labs[lab]
         except KeyError:
+            warn('No map info for %s: ' % lab)
             return []
 
     def getMapBounds(self, lab):
@@ -44,5 +47,6 @@ class Locator():
             my = max([y for h, (x,y) in self.getMap(lab)])
             return mx, my
         except ValueError:
+            warn('No host info for %s: ' % lab)
             return 0,0
 

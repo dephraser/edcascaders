@@ -1,27 +1,33 @@
+import os
 import gtk
 
 class AcceptHelpDialog():
+    ''' Dialog asking the user if they will accept helping the user '''
     def __init__(self, username, subject, description):
-        self.builder = gtk.Builder()
-        self.root = self.builder.add_from_file('gui/helpacceptreject.glade')
+        builder = gtk.Builder()
 
-        self.window = self.builder.get_object('dgHelpAcceptReject')
-        self.builder.get_object('lbUserInfo').set_label('%s is wanting help on %s' % (username, subject))
-        self.builder.get_object('lbDesc').set_label(description)
-        self.builder.connect_signals(self)
+        dr = os.path.dirname(__file__)
+        builder.add_from_file(os.path.join(dr, 'gui', 'helpacceptreject.glade'))
+
+        self.window = builder.get_object('dgHelpAcceptReject')
+        builder.get_object('lbUserInfo').set_label('%s is wanting help on %s' % (username, subject))
+        builder.get_object('lbDesc').set_label(description)
+        builder.connect_signals(self)
 
         self.accept = True
 
         self.window.show_all()
         self.window.run()
 
+    def onReject(self, e):
+        self.window.destroy()
 
     def onAccept(self, e):
         self.accept = True
         self.window.destroy()
 
-    def onReject(self, e):
-        self.window.destroy()
+    #--------------------------------------------------------------------------
+    # Functions for external use
 
     def isAccept(self):
         return self.accept

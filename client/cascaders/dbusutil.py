@@ -20,5 +20,6 @@ class DbusClient(object):
         return getattr(self.obj, name)
 
 def isOwner(interface):
+    ''' Returns true if this program owns the given service '''
     return dbus.SessionBus().request_name(interface) == dbus.bus.REQUEST_NAME_REPLY_PRIMARY_OWNER
 

@@ -13,57 +13,40 @@ import gtk
 import gtk.glade
 import gobject
 
+#rpc
 import client
 import service
+
 from locator import Locator
 
+#message boxes
 from accepthelp import AcceptHelpDialog
 from askdialog import AskForHelp
 from messagedialog import MessageDialog
 
+import util
 from util import getComboBoxText, initTreeView, errorDialog
 
-DEBUG = True
-
-import time
-def generateUnqiueId():
-    return str(time.time())
-
 class CascadersFrame:
-    def onTrayMenu(self, icon, btn, time):
-        menu = gtk.Menu()
-
-        quit = gtk.MenuItem()
-        quit.set_label('Quit')
-        quit.connect('activate', gtk.main_quit)
-        menu.append(quit)
-
-        menu.show_all()
-        menu.popup(None, None, gtk.status_icon_position_menu, btn, time, self.trayIcon)
-
-
     def __init__(self):
         self.initGui()
+
         self.trayIcon = gtk.status_icon_new_from_file('icons/cascade32.png')
         self.trayIcon.connect('activate', lambda *a: self.window.show_all())
         self.trayIcon.connect('popup-menu', self.onTrayMenu)
-
-        #go to tray on quit
         self.window.connect('delete-event', lambda w, e: w.hide() or True)
 
         self.messageDialog = MessageDialog()
 
-        self.client = None
+        self.client = None #client for connection to server
 
-        self.subjects  = []
-        self.cascaders = {}
+        self.subjects  = [] #list of subjects, retrived from the server
+        self.cascaders = {} #list of cascaders, from the server
 
-        self.cascadeSubjects = set()
-
-        self.cascading = False
+        self.cascadeSubjects = set() #list of subjects the user is cascading in
+        self.cascading = False #user cascading
 
         self.locator = Locator(open('./data/hosts'))
-
         self.initLabs()
 
         self.initService()
@@ -71,7 +54,9 @@ class CascadersFrame:
 
     def initGui(self):
         self.builder = gtk.Builder()
-        self.root = self.builder.add_from_file('gui/main.glade')
+
+        dr = os.path.dirname(__file__)
+        self.builder.add_from_file(os.path.join(dr, 'gui', 'main.glade'))
 
         initTreeView(self.builder.get_object('tvCascList'))
         initTreeView(self.builder.get_object('tvCascSubjects'))
@@ -100,9 +85,13 @@ class CascadersFrame:
         cb.pack_start(cell, True)
         cb.add_attribute(cell, 'text', 0)
 
+    #--------------------------------------------------------------------------
+    # Connection stuff
     def initService(self):
         '''
-        This sets up the service that the client provides to the server
+        This sets up the service that the client provides to the server.
+
+        This is required for setup
         '''
 
         s = self.service = service.RpcService()
@@ -115,68 +104,6 @@ class CascadersFrame:
 
         s.registerUserAskingForHelp(self.onUserAskingForHelp)
 
-    #--------------------------------------------------------------------------
-
-    def onUserAskingForHelp(self,  helpid, username, subject, description):
-        debug('Help: %s' % username)
-
-        d = AcceptHelpDialog(username, subject, description)
-
-        #check if user can give help
-        if d.isAccept():
-            debug('Accepted')
-            self.messageDialog.addTab(helpid, username)
-
-            #setup functions to write to the message stuff
-            f = lambda msg: self.messageDialog.writeMessage(helpid, username, msg)
-            self.service.registerOnMessgeHandler(helpid, f)
-
-            self.messageDialog.writeMessage(helpid, 'SYSTEM', 'Accepted Request')
-            self.messageDialog.window.show()
-
-            self.service.registerOnMessgeHandler(helpid, f)
-
-            wf =  lambda msg: self.client.sendMessage(helpid, username, subject, msg)
-            self.messageDialog.registerMessageCallback(helpid, wf)
-            return (True, '')
-        debug('Rejected')
-        return (False, '')
-
-    def onCascaderAddedSubjects(self, username, subjects):
-        debug('Cascader %s added subjects %s' % (username, subjects))
-        host, curSubjects = self.cascaders[username]
-        self.cascaders[username] = (host, curSubjects + subjects)
-        self.updateCascaderLists()
-
-    def onCascaderRemovedSubjects(self, username, subjects):
-        debug('Cascader %s removed subjects %s' % (username, subjects))
-        try: 
-            host, curSubjects = self.cascaders[username]
-            for remSubject in subjects:
-                try:
-                    curSubjects.remove(remSubject)
-                except ValueError:
-                    pass
-        except KeyError:
-            pass
-        self.updateCascaderLists()
-
-    def onCascaderJoined(self, username, hostname, subjects):
-        debug('New cascader: %s' % username)
-        try:
-            self.cascaders[username] = (hostname, subjects)
-        except KeyError:
-            pass
-        self.updateCascaderLists()
-
-    def onCascaderLeft(self, username):
-        debug('Cascader left: %s' % username)
-        del self.cascaders[username]
-        self.updateCascaderLists()
-
-
-    #--------------------------------------------------------------------------
-    # Connection stuff
 
     def initConnection(self):
         ''' called in the constructor. also does the setup post connect '''
@@ -227,14 +154,98 @@ class CascadersFrame:
         status.set('Connected')
 
     def bgServer(self, source = None, cond = None):
-        '''This function is called when there is data to be read in the pipe'''
+        '''
+        This function is called when there is data to be read in the pipe
+
+        (It is setup in initConnection)
+        '''
         if self.client.conn:
             self.client.conn.poll_all()
             return True
         else:
             return False
     #--------------------------------------------------------------------------
+    # Service callback functions
+
+    def onUserAskingForHelp(self,  helpid, username, subject, description):
+        debug('Help wanted by: %s' % username)
+
+        dialog = AcceptHelpDialog(username, subject, description)
+
+        #check if user can give help
+        if dialog.isAccept():
+            debug('Help Accepted')
+
+            self.messageDialog.addTab(helpid, username)
+
+            #setup functions to write to the messages from the message dialog to
+            #the server
+            f = lambda msg: self.messageDialog.writeMessage(helpid, username, msg)
+            self.service.registerOnMessgeHandler(helpid, f)
+
+            #functions to write from server to message window
+            wf =  lambda msg: self.client.sendMessage(helpid, username, subject, msg)
+            self.messageDialog.registerMessageCallback(helpid, wf)
+
+            self.messageDialog.writeMessage(helpid, 'SYSTEM', 'Accepted Request')
+            self.messageDialog.window.show()
+
+            return (True, '')
+
+        debug('Help rejected')
+        return (False, '')
+
+    def onCascaderAddedSubjects(self, username, subjects):
+        debug('Cascader %s added subjects %s' % (username, subjects))
+        host, curSubjects = self.cascaders[username]
+        self.cascaders[username] = (host, curSubjects + subjects)
+        self.updateCascaderLists()
+
+    def onCascaderRemovedSubjects(self, username, subjects):
+        debug('Cascader %s removed subjects %s' % (username, subjects))
+        try: 
+            host, curSubjects = self.cascaders[username]
+            for remSubject in subjects:
+                try:
+                    curSubjects.remove(remSubject)
+                except ValueError:
+                    pass
+        except KeyError:
+            pass
+        self.updateCascaderLists()
+
+    def onCascaderJoined(self, username, hostname, subjects):
+        debug('New cascader: %s' % username)
+        try:
+            self.cascaders[username] = (hostname, subjects)
+        except KeyError:
+            pass
+        self.updateCascaderLists()
+
+    def onCascaderLeft(self, username):
+        debug('Cascader left: %s' % username)
+        del self.cascaders[username]
+        self.updateCascaderLists()
+
+    #--------------------------------------------------------------------------
+    def updateMap(self, lab):
+        ''' Rebuilds the map '''
+        labMap = self.builder.get_object('tblMap')
+        [x.destroy() for x in labMap.get_children()]
+        mx,my = self.locator.getMapBounds(lab)
+        labMap.resize(mx,my)
+
+        for host, (x,y) in self.locator.getMap(lab):
+            x = mx - x
+            l = gtk.Label()
+            l.set_label(host.split('.')[0])
+            l.show_all()
+            labMap.attach(l, x,x+1,y,y+1)
+
     def updateAllSubjects(self):
+        '''
+        Calling this ensures that the gui reflects the current list of subjects
+        '''
         debug('Subjects: %s' % self.subjects)
 
         cascCb = self.builder.get_object('cbCascSubjectList')
@@ -271,14 +282,21 @@ class CascadersFrame:
         cbSubjects = self.builder.get_object('cbFilterSubject')
         cbLabs = self.builder.get_object('cbFilterLab')
         for username, (hostname, subjects) in self.cascaders.iteritems():
-            lab = self.locator.labFromHostname(hostname)
+            if username == self.logname:
+                continue
 
             filterSub = getComboBoxText(cbSubjects)
-            if filterSub in subjects or filterSub == 'All':
-                if getComboBoxText(cbLabs) in ['All', lab]:
-                    ls.append([username])
+            if not filterSub in list(subjects) + ['All']:
+                continue
+
+            lab = self.locator.labFromHostname(hostname)
+            if not getComboBoxText(cbLabs) in ['All', lab]:
+                continue
+
+            ls.append([username])
 
     #--------------------------------------------------------------------------
+    # GUI events
     def onStartStopCascading(self, event):
         btn = self.builder.get_object('btStartStopCasc')
         btn.set_sensitive(False)
@@ -307,20 +325,22 @@ class CascadersFrame:
 
         if helpDialog.isOk():
             debug('Dialog is ok, asking for help')
-            helpid = (self.logname, generateUnqiueId())
+            helpid = (self.logname, util.generateUnqiueId())
 
             #add a tab
             self.messageDialog.addTab(helpid, cascaderUsername)
 
-            #setup functions to write to the message stuff
+            #setup functions to write to the message stuff when messages
+            #come from the server to the client
             f = lambda msg: self.messageDialog.writeMessage(helpid, cascaderUsername, msg)
             self.service.registerOnMessgeHandler(helpid, f)
 
-            self.messageDialog.writeMessage(helpid, 'SYSTEM', 'Wating for response')
-            self.messageDialog.window.show()
-
+            #setup handler to send messages from the dialog to the server
             wf =  lambda msg: self.client.sendMessage(helpid, cascaderUsername, subject, msg)
             self.messageDialog.registerMessageCallback(helpid, wf)
+
+            self.messageDialog.writeMessage(helpid, 'SYSTEM', 'Wating for response')
+            self.messageDialog.window.show()
 
             def onResponse(result):
                 accepted, message = result.value
@@ -374,7 +394,9 @@ class CascadersFrame:
     
     def onLabSelect(self, event):
         self.updateCascaderLists()
+
     #-- -----------------------------------------------------------------------
+
     def onFilterLabChange(self, evt):
         debug('Filter Lab Changed')
 
@@ -382,7 +404,7 @@ class CascadersFrame:
 
         cbLab = self.builder.get_object('cbFilterLab')
         lab = getComboBoxText(cbLab)
-        self.renderMap(lab)
+        self.updateMap(lab)
 
     def onFilterSubjectChange(self, evt):
         debug('Filter Subject Changed')
@@ -390,16 +412,20 @@ class CascadersFrame:
 
     #-- -----------------------------------------------------------------------
 
-    def renderMap(self, lab):
-        labMap = self.builder.get_object('tblMap')
-        for x in labMap.get_children():
-            x.destroy()
-        mx,my = self.locator.getMapBounds(lab)
-        labMap.resize(mx,my)
+    def onTrayMenu(self, icon, btn, time):
+        '''
+        Menu popup for the tray icon
+        '''
+        menu = gtk.Menu()
 
-        for host, (x,y) in self.locator.getMap(lab):
-            x = mx - x
-            l = gtk.Label()
-            l.set_label(host.split('.')[0])
-            l.show_all()
-            labMap.attach(l, x,x+1,y,y+1)
+        quit = gtk.MenuItem()
+        quit.set_label('Quit')
+        quit.connect('activate', gtk.main_quit)
+        menu.append(quit)
+
+        menu.show_all()
+        menu.popup(None,
+                   None,
+                   gtk.status_icon_position_menu,
+                   btn,
+                   time, self.trayIcon)

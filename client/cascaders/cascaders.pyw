@@ -6,13 +6,18 @@ import logging
 
 import gtk
 
-from mainframe import CascadersFrame
+import mainframe
 
 import dbusutil
 import dbus.service
 import dbus.mainloop.glib
 
+#--------------
+#Constants
 DEBUG = 1
+
+
+mainframe.DEBUG = DEBUG
 
 class RaiseableService(dbusutil.DbusService):
     '''Service provides a method of raising the window to dbus'''
@@ -31,7 +36,7 @@ if __name__ == '__main__':
     dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
 
     if DEBUG:
-        win = CascadersFrame()
+        win = mainframe.CascadersFrame()
         gtk.main()
     else:
         interface = 'com.compsoc'

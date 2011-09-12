@@ -1,3 +1,4 @@
+import os
 import gtk
 
 class MessageDialog:
@@ -8,7 +9,9 @@ class MessageDialog:
     '''
     def __init__(self):
         self.builder = gtk.Builder()
-        self.root = self.builder.add_from_file('gui/messaging.glade')
+
+        dr = os.path.dirname(__file__)
+        self.builder.add_from_file(os.path.join(dr, 'gui', 'messaging.glade'))
 
         self.window = self.builder.get_object('wdMessage')
         self.notebook = self.builder.get_object('notebook')
@@ -20,6 +23,9 @@ class MessageDialog:
         self.sendMessage = {}
 
     def addTab(self, helpid, title):
+        '''
+        Adds a tab with a close button
+        '''
         #hbox will be used to store a label and button, as notebook tab title
         hbox = gtk.HBox(False, 0)
         label = gtk.Label(title)
@@ -60,17 +66,16 @@ class MessageDialog:
         btn.connect('clicked', self.onTabCloseClicked, widget)
 
     def onTabCloseClicked(self, sender, widget):
+        ''' 
+        Function hides window when last dialog is closed as there is nothing
+        else to display
+        '''
         pagenum = self.notebook.page_num(widget)
         self.notebook.remove_page(pagenum)
 
         if self.notebook.get_n_pages() == 0:
             self.window.hide_all()
     
-    def writeMessage(self, helpid, frm, msg):
-        buff = self.messageBuffers[helpid]
-        text = '[%s] %s\n' % (frm, msg)
-        buff.insert(buff.get_end_iter(), text)
-
     def onSendClicked(self, widget, textbuff, helpid):
         start, end = textbuff.get_bounds()
         text = textbuff.get_text(start, end)
@@ -78,5 +83,17 @@ class MessageDialog:
         self.writeMessage(helpid, 'ME', text)
         textbuff.set_text('')
 
+    def writeMessage(self, helpid, frm, msg):
+        '''
+        Writes a message to the correct message box 
+        '''
+        buff = self.messageBuffers[helpid]
+        text = '[%s] %s\n' % (frm, msg)
+        buff.insert(buff.get_end_iter(), text)
+
     def registerMessageCallback(self, helpid, f):
+        '''
+        Registers a callback that is called when the user enters text
+        to send to the server
+        '''
         self.sendMessage[helpid] = f
