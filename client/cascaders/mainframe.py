@@ -394,10 +394,11 @@ class CascadersFrame:
         labMap = self.builder.get_object('tblMap')
         for x in labMap.get_children():
             x.destroy()
-        x,y = self.locator.getMapBounds(lab)
-        labMap.resize(x,y)
+        mx,my = self.locator.getMapBounds(lab)
+        labMap.resize(mx,my)
 
         for host, (x,y) in self.locator.getMap(lab):
+            x = mx - x
             l = gtk.Label()
             l.set_label(host.split('.')[0])
             l.show_all()
