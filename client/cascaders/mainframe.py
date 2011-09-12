@@ -54,7 +54,7 @@ class CascadersFrame:
         self.client = None
 
         self.subjects  = []
-        self.cascaders = []
+        self.cascaders = {}
 
         self.cascadeSubjects = set()
 
@@ -115,7 +115,19 @@ class CascadersFrame:
         #check if user can give help
         if d.isAccept():
             debug('Accepted')
-            self.service.registerOnMessgeHandler(helpid, function)
+            self.messageDialog.addTab(helpid, username)
+
+            #setup functions to write to the message stuff
+            f = lambda msg: self.messageDialog.writeMessage(helpid, cascaderUsername, msg)
+            self.service.registerOnMessgeHandler(helpid, f)
+
+            self.messageDialog.writeMessage(helpid, 'SYSTEM', 'Accepted Request')
+            self.messageDialog.window.show()
+
+            self.service.registerOnMessgeHandler(helpid, f)
+
+            wf =  lambda msg: self.client.sendMessage(helpid, username, subject, msg)
+            self.messageDialog.registerMessageCallback(helpid, wf)
             return (True, '')
         debug('Rejected')
         return (False, '')
@@ -248,7 +260,7 @@ class CascadersFrame:
 
         cbSubjects = self.builder.get_object('cbFilterSubject')
         cbLabs = self.builder.get_object('cbFilterLab')
-        for username, (hostname, subjects) in self.cascaders:
+        for username, (hostname, subjects) in self.cascaders.iteritems():
             lab = self.locator.labFromHostname(hostname)
 
             filterSub = getComboBoxText(cbSubjects)
@@ -286,11 +298,40 @@ class CascadersFrame:
         if helpDialog.isOk():
             debug('Dialog is ok, asking for help')
             helpid = (self.logname, generateUnqiueId())
+
+            #add a tab
+            self.messageDialog.addTab(helpid, cascaderUsername)
+
+            #setup functions to write to the message stuff
+            f = lambda msg: self.messageDialog.writeMessage(helpid, cascaderUsername, msg)
+            self.service.registerOnMessgeHandler(helpid, f)
+
+            self.messageDialog.writeMessage(helpid, 'SYSTEM', 'Wating for response')
+            self.messageDialog.window.show()
+
+            wf =  lambda msg: self.client.sendMessage(helpid, cascaderUsername, subject, msg)
+            self.messageDialog.registerMessageCallback(helpid, wf)
+
+            def onResponse(result):
+                debug(result._obj)
+                #todo fixme
+                accepted, message = result._obj
+                wf = self.messageDialog.writeMessage
+                if accepted:
+                    wf(helpid, 'SYSTEM', cascaderUsername + ' accepted your help request')
+                else:
+                    wf(helpid, 'SYSTEM', cascaderUsername + ' rejected your help request')
+                    
+                    if message:
+                        wf(helpid, cascaderName, message)
+
             self.client.askForHelp(helpid,
                                    cascaderUsername,
                                    helpDialog.getSubject(),
                                    helpDialog.getDescription(),
-                                   lambda *a: debug("HELP: " + str(a)) )
+                                   onResponse )
+
+
     
     def onAddSubject(self, event):
         cb = self.builder.get_object('cbCascSubjectList')

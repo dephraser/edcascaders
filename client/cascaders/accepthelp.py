@@ -10,20 +10,20 @@ class AcceptHelpDialog():
         self.builder.get_object('lbDesc').set_label(description)
         self.builder.connect_signals(self)
 
-        self.isAccept = True
+        self.accept = True
 
         self.window.show_all()
         self.window.run()
 
 
     def onAccept(self, e):
-        self.isAccept = True
+        self.accept = True
         self.window.destroy()
 
     def onReject(self, e):
         self.window.destroy()
 
     def isAccept(self):
-        return self.isAccept
+        return self.accept
 
 

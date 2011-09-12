@@ -53,6 +53,10 @@ class RpcClient:
         rpyc.async(self.user.removeSubjects)(subjects)
 
     #--------------------------------------------------------------------------
+
+    def sendMessage(self, helpid, username, subject, message):
+        rpyc.async(self.user.addSubjects)(helpid, username, subject, message)
+
     # messaging related
     def askForHelp(self, helpid, username, subject, problem, callback=None):
         res = rpyc.async(self.user.askForHelp)(helpid, username,

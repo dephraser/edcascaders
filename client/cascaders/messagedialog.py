@@ -14,6 +14,11 @@ class MessageDialog:
         self.notebook = self.builder.get_object('notebook')
         self.builder.connect_signals(self)
 
+        #holds the message buffers by helpid
+        self.messageBuffers = {}
+
+        self.sendMessage = {}
+
     def addTab(self, helpid, title):
         #hbox will be used to store a label and button, as notebook tab title
         hbox = gtk.HBox(False, 0)
@@ -42,11 +47,15 @@ class MessageDialog:
         b = gtk.Builder()
         b.add_from_file('gui/messaging.glade')
         widget = b.get_object('frMessageFrame')
+        self.messageBuffers[helpid] = b.get_object('tbMessages')
         widget.unparent()
         widget.show_all()
         
         self.notebook.insert_page(widget, hbox)
         
+        send = b.get_object('btSend')
+        send.connect('clicked', self.onSendClicked, helpid)
+
         btn.connect('clicked', self.onTabCloseClicked, widget)
 
     def onTabCloseClicked(self, sender, widget):
@@ -54,7 +63,15 @@ class MessageDialog:
         self.notebook.remove_page(pagenum)
 
         if self.notebook.get_n_pages() == 0:
-            self.window.destroy()
+            self.window.hide_all()
     
     def writeMessage(self, helpid, frm, msg):
-        pass
+        buff = self.messageBuffers[helpid]
+        text = '[%s] %s\n' % (frm, msg)
+        buff.insert(buff.get_end_iter(), text)
+
+    def onSendClicked(self, message, helpid):
+        self.sendMessage[helpid](message)
+
+    def registerMessageCallback(self, helpid, f):
+        self.sendMessage[helpid] = f

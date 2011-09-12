@@ -29,7 +29,7 @@
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
                     <property name="editable">False</property>
-                    <property name="buffer">txMessages</property>
+                    <property name="buffer">tbMessages</property>
                   </object>
                   <packing>
                     <property name="position">0</property>
@@ -49,7 +49,7 @@
                       </packing>
                     </child>
                     <child>
-                      <object class="GtkButton" id="button1">
+                      <object class="GtkButton" id="btSend">
                         <property name="label" translatable="yes">Send</property>
                         <property name="visible">True</property>
                         <property name="can_focus">True</property>
@@ -79,5 +79,5 @@
     </child>
   </object>
   <object class="GtkTextBuffer" id="tbCurrentInput"/>
-  <object class="GtkTextBuffer" id="txMessages"/>
+  <object class="GtkTextBuffer" id="tbMessages"/>
 </interface>
