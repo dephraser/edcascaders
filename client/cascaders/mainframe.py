@@ -118,7 +118,7 @@ class CascadersFrame:
             self.messageDialog.addTab(helpid, username)
 
             #setup functions to write to the message stuff
-            f = lambda msg: self.messageDialog.writeMessage(helpid, cascaderUsername, msg)
+            f = lambda msg: self.messageDialog.writeMessage(helpid, username, msg)
             self.service.registerOnMessgeHandler(helpid, f)
 
             self.messageDialog.writeMessage(helpid, 'SYSTEM', 'Accepted Request')
@@ -313,9 +313,7 @@ class CascadersFrame:
             self.messageDialog.registerMessageCallback(helpid, wf)
 
             def onResponse(result):
-                debug(result._obj)
-                #todo fixme
-                accepted, message = result._obj
+                accepted, message = result.value
                 wf = self.messageDialog.writeMessage
                 if accepted:
                     wf(helpid, 'SYSTEM', cascaderUsername + ' accepted your help request')

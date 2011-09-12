@@ -53,8 +53,9 @@ class MessageDialog:
         
         self.notebook.insert_page(widget, hbox)
         
+        textbuff = b.get_object('tbCurrentInput')
         send = b.get_object('btSend')
-        send.connect('clicked', self.onSendClicked, helpid)
+        send.connect('clicked', self.onSendClicked, textbuff, helpid)
 
         btn.connect('clicked', self.onTabCloseClicked, widget)
 
@@ -70,8 +71,12 @@ class MessageDialog:
         text = '[%s] %s\n' % (frm, msg)
         buff.insert(buff.get_end_iter(), text)
 
-    def onSendClicked(self, message, helpid):
-        self.sendMessage[helpid](message)
+    def onSendClicked(self, widget, textbuff, helpid):
+        start, end = textbuff.get_bounds()
+        text = textbuff.get_text(start, end)
+        self.sendMessage[helpid](text)
+        self.writeMessage(helpid, 'ME', text)
+        textbuff.set_text('')
 
     def registerMessageCallback(self, helpid, f):
         self.sendMessage[helpid] = f
