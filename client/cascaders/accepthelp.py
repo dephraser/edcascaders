@@ -1,6 +1,8 @@
 import os
 import gtk
 
+from logging import debug
+
 class AcceptHelpDialog():
     ''' Dialog asking the user if they will accept helping the user '''
     def __init__(self, username, subject, description):
@@ -11,6 +13,7 @@ class AcceptHelpDialog():
 
         self.window = builder.get_object('dgHelpAcceptReject')
         builder.get_object('lbUserInfo').set_label('%s is wanting help on %s' % (username, subject))
+        debug(description)
         builder.get_object('lbDesc').set_label(description)
         builder.connect_signals(self)
 

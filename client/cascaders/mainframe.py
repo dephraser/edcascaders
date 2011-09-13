@@ -4,7 +4,7 @@ core functionality that the user uses while using the application.
 
 It doesn't handle any functionality outside the frame such as messaging
 '''
-from logging import debug, error
+from logging import debug
 import os
 import sys
 import socket
@@ -26,6 +26,8 @@ from messagedialog import MessageDialog
 
 import util
 from util import getComboBoxText, initTreeView, errorDialog
+
+DEBUG = 0
 
 class CascadersFrame:
     def __init__(self):
@@ -112,6 +114,8 @@ class CascadersFrame:
         status = self.builder.get_object('lbStatus')
         status.set('Connecting...')
 
+
+
         try:
             logname = os.environ['LOGNAME']
             
@@ -133,6 +137,9 @@ class CascadersFrame:
                                            5010,
                                            logname,
                                            socket.gethostname())
+
+            if DEBUG:
+                self.client.setAsync(False)
 
             def subject(result):
                 self.subjects = [x for x in result.value]
@@ -351,7 +358,7 @@ class CascadersFrame:
                     wf(helpid, 'SYSTEM', cascaderUsername + ' rejected your help request')
                     
                     if message:
-                        wf(helpid, cascaderName, message)
+                        wf(helpid, cascaderUsername, message)
 
             self.client.askForHelp(helpid,
                                    cascaderUsername,

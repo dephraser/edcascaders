@@ -3,11 +3,11 @@ import os
 import gtk
 import gobject
 
-from util import getComboBoxText
+from util import getComboBoxText, errorDialog
 
 class AskForHelp:
     '''
-    Core functionality for the ask for help box
+    Core functionality for the ask for help box, includes validation
     '''
     def __init__(self, parent, subjects, currentSubject = None):
         '''
@@ -35,6 +35,7 @@ class AskForHelp:
         cb.pack_start(cell, True)
         cb.add_attribute(cell, 'text', 0)
 
+        self.subject = self.desc = None
         self.ok = False
 
         self.window.run()
@@ -43,21 +44,17 @@ class AskForHelp:
         self.window.destroy()
 
     def onOk(self, event):
-        if not self.isValid():
-            #TODO
-            pass
-        else:
-            self.ok = True
-            self.window.destroy()
+        #need to get these before everything is destroyed
+        self.subject = getComboBoxText(self.builder.get_object('cbSubject'))
+        self.desc = self.builder.get_object('txDesc').get_text()
 
-    def isValid(self):
-        '''
-        This validates the user input to check that all is as it should
-        be. Basically that there is a problem description entered,
-        and a subject is selected
-        '''
-        #TODO
-        return True
+        if not len(self.getDescription().strip()):
+            errorDialog('There must be a problem description')
+        elif self.getSubject() is None:
+            errorDialog('Must have a subject selected')
+
+        self.ok = True
+        self.window.destroy()
 
     #--------------------------------------------------------------------------
     # Functions designed for external use
@@ -67,7 +64,7 @@ class AskForHelp:
         return self.ok
 
     def getSubject(self):
-        return getComboBoxText(self.builder.get_object('cbSubject'))
+        return self.subject
 
     def getDescription(self):
-        return self.builder.get_object('txDesc').get_text()
+        return self.desc

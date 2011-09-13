@@ -19,11 +19,12 @@ def errorDialog(msg):
 
 def getComboBoxText(cb):
     '''
-    Returns the selected value in the select box
+    Returns the selected value in the select box. Return none on nothing
+    selected
     '''
     model = cb.get_model()
     itr = cb.get_active_iter()
-    return model.get_value(itr, 0)
+    return model.get_value(itr, 0) if itr is not None else None
 
 def initTreeView(tv):
     column = gtk.TreeViewColumn()
