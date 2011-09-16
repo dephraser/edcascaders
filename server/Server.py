@@ -1,5 +1,4 @@
 from __future__ import with_statement
-from rpyc import Service, async
 from rpyc.utils.server import ThreadedServer
 from threading import RLock
 
@@ -53,7 +52,15 @@ class UserToken(object):
         if self.stale:
             return
         self.stale = True
+
+        #Need to inform other clients 
+        with data_lock:
+            for value in tokens.itervalues():
+                #This is a remote produre call to the clients
+                value.conn.root.cascaderLeft(self.user)
+        
         del tokens[self.user] 
+
         
     def exposed_startCascading(self):
         '''
