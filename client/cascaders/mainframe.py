@@ -277,12 +277,12 @@ class CascadersFrame:
 
     def onCascaderAddedSubjects(self, username, subjects):
         debug('Cascader %s added subjects %s' % (username, subjects))
-        self.cascaders.addSubjects(username, subjects)
+        self.cascaders.addCascaderSubjects(username, subjects)
         self.updateCascaderLists()
 
     def onCascaderRemovedSubjects(self, username, subjects):
         debug('Cascader %s removed subjects %s' % (username, subjects))
-        self.cascaders.removedSubjects(username, subjects)
+        self.cascaders.removeCascaderSubjects(username, subjects)
         self.updateCascaderLists()
 
     def onCascaderJoined(self, username, hostname, subjects):
