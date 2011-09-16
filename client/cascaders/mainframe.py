@@ -4,7 +4,7 @@ core functionality that the user uses while using the application.
 
 It doesn't handle any functionality outside the frame such as messaging
 '''
-from logging import debug
+from logging import warn, debug
 import os
 import sys
 import socket
@@ -207,9 +207,12 @@ class CascadersFrame:
 
     def onCascaderAddedSubjects(self, username, subjects):
         debug('Cascader %s added subjects %s' % (username, subjects))
-        host, curSubjects = self.cascaders[username]
-        self.cascaders[username] = (host, curSubjects + subjects)
-        self.cascaderHosts[hosts] = (username, curSubjects + subjects)
+        try: 
+            host, curSubjects = self.cascaders[username]
+            self.cascaders[username] = (host, curSubjects + subjects)
+            self.cascaderHosts[hosts] = (username, curSubjects + subjects)
+        except KeyError:
+            warn('Tried to add subjects to cascader %s, prob not cascading' % username)
         self.updateCascaderLists()
 
     def onCascaderRemovedSubjects(self, username, subjects):
@@ -223,15 +226,12 @@ class CascadersFrame:
                     pass
             self.cascaderHosts[hosts] = (username, curSubjects)
         except KeyError:
-            pass
+            warn('Tried to remove subjects from cascader %s, prob not cascading' % username)
         self.updateCascaderLists()
 
     def onCascaderJoined(self, username, hostname, subjects):
         debug('New cascader: %s' % username)
-        try:
-            self.cascaders[username] = (hostname, subjects)
-        except KeyError:
-            pass
+        self.cascaders[username] = (hostname, subjects)
         self.updateCascaderLists()
 
     def onCascaderLeft(self, username):
