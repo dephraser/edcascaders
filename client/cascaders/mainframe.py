@@ -29,6 +29,77 @@ from util import getComboBoxText, initTreeView, errorDialog
 
 DEBUG = 0
 
+class Cascaders:
+    ''' Manages the cascaders and provides helpful functions '''
+
+    def __init__(self, locator, username):
+        '''
+        username is the current users username. This is excluded from
+        results
+        locator is a object that implements labFromHostname
+        '''
+        self.locator = locator
+        self.username = username
+        self.cascaders = {}
+
+    def __str__(self):
+        return str(self.cascaders)
+
+    def addCascader(self, username, host, subjects):
+        if username != self.username:
+            self.cascaders[username] = (host, list(subjects))
+
+    def removeCascader(self, username):
+        try:
+            del self.cascaders[username]
+        except KeyError:
+            warn('Cascader that left didn\'t exist (maybe this user)')
+
+    def addCascaderSubjects(self, username, subjects):
+        try:
+            host, curSubjects = self.cascaders[username]
+            self.cascaders[username] = (host, curSubjects + list(subjects))
+        except KeyError:
+            warn('Cascader that left didn\'t exist (maybe this user)')
+
+    def removeCascaderSubjects(self, username, subjects):
+        debug('Cascader %s removed subjects %s' % (username, subjects))
+        try: 
+            host, curSubjects = self.cascaders[username]
+            for remSubject in subjects:
+                try:
+                    curSubjects.remove(remSubject)
+                except ValueError:
+                    debug('User wasn\'t cascading subject %s' % remSubject)
+        except KeyError:
+            warn('Tried to remove subjects from cascader %s, prob not cascading' % username)
+
+    def findCascaders(self, lab=None, subjects=None, host=None):
+        '''
+        Find all cascaders that match the given patterns
+
+        TODO really slow, not sure it matters
+        '''
+        for user, (cascHost, cascSubjects) in self.cascaders.iteritems():
+            if host and host != cascHost:
+                continue
+
+            if lab and self.locator.labFromHostname(cascHost) != lab:
+                continue
+
+            if subjects and not subjects in cascSubjects:
+                continue
+
+            yield user, (host, cascSubjects)
+
+    def findCascader(self, **kwargs):
+        ''' Wrapper around findCascaders, returns the first match or None '''
+        try:
+            return self.findCascaders(**kwargs).next()
+        except StopIteration:
+            return None
+
+
 class CascadersFrame:
     def __init__(self):
         self.initGui()
@@ -40,19 +111,33 @@ class CascadersFrame:
 
         self.messageDialog = MessageDialog()
 
-        self.client = None #client for connection to server
-
-        self.subjects  = [] #list of subjects, retrived from the server
-        self.cascaders = {} #list of cascaders, from the server
-        self.cascaderHosts = {} #list of hosts, with cascader, from the server
-
-        self.cascadeSubjects = set() #list of subjects the user is cascading in
-        self.cascading = False #user cascading
+        try:
+            logname = os.environ['LOGNAME']
+            
+            #for debugging only, means multiple clients can be run at once
+            if DEBUG:
+                import random
+                logname = str(random.random())
+        except KeyError:
+            errorDialog(('Couldn\'t get LOGNAME from the enviroment,'
+                         ' this only runs on Linux at the moment'))
+            #can't destroy the window as it leads to an exception
+            sys.exit(1) 
+        self.username = self.logname = logname
 
         self.locator = Locator(open('./data/hosts'))
         self.initLabs()
 
+        self.subjects  = [] #list of subjects, retrived from the server
+        self.cascaders = Cascaders(self.locator, self.username) 
+
+        self.cascadeSubjects = set() #list of subjects the user is cascading in
+        self.cascading = False #user cascading
+
+
         self.initService()
+
+        self.client = None #client for connection to server
         self.initConnection()
 
     def initGui(self):
@@ -117,27 +202,14 @@ class CascadersFrame:
 
 
 
-        try:
-            logname = os.environ['LOGNAME']
-            
-            #for debugging only, means multiple clients can be run at once
-            if DEBUG:
-                import random
-                logname = str(random.random())
-        except KeyError:
-            errorDialog(('Couldn\'t get LOGNAME from the enviroment,'
-                         ' this only runs on Linux at the moment'))
-            #can't destroy the window as it leads to an exception
-            sys.exit(1) 
-        self.logname = logname
         self.hostname = socket.gethostname()
-        self.builder.get_object('lbUsername').set(logname)
+        self.builder.get_object('lbUsername').set(self.username)
 
         try:
             self.client = client.RpcClient(lambda b:self.service,
                                            'localhost',
                                            5010,
-                                           logname,
+                                           self.username,
                                            self.hostname)
 
             if DEBUG:
@@ -148,10 +220,8 @@ class CascadersFrame:
                 self.updateAllSubjects()
 
             def casc(result):
-                self.cascaders = {}
                 for usr, host, sub in result.value:
-                    self.cascaders[usr] = (host, sub)
-                    self.cascaderHosts[host] = (usr, sub)
+                    self.cascaders.addCascader(usr, host, sub)
                 self.updateCascaderLists()
 
             self.client.getSubjectList(subject)
@@ -207,36 +277,22 @@ class CascadersFrame:
 
     def onCascaderAddedSubjects(self, username, subjects):
         debug('Cascader %s added subjects %s' % (username, subjects))
-        try: 
-            host, curSubjects = self.cascaders[username]
-            self.cascaders[username] = (host, curSubjects + list(subjects))
-            self.cascaderHosts[host] = (username, curSubjects + list(subjects))
-        except KeyError:
-            warn('Tried to add subjects to cascader %s, prob not cascading' % username)
+        self.cascaders.addSubjects(username, subjects)
         self.updateCascaderLists()
 
     def onCascaderRemovedSubjects(self, username, subjects):
         debug('Cascader %s removed subjects %s' % (username, subjects))
-        try: 
-            host, curSubjects = self.cascaders[username]
-            for remSubject in subjects:
-                try:
-                    curSubjects.remove(remSubject)
-                except ValueError:
-                    pass
-            self.cascaderHosts[host] = (username, curSubjects)
-        except KeyError:
-            warn('Tried to remove subjects from cascader %s, prob not cascading' % username)
+        self.cascaders.removedSubjects(username, subjects)
         self.updateCascaderLists()
 
     def onCascaderJoined(self, username, hostname, subjects):
         debug('New cascader: %s' % username)
-        self.cascaders[username] = (hostname, list(subjects))
+        self.cascaders.addCascader(username, hostname, subjects)
         self.updateCascaderLists()
 
     def onCascaderLeft(self, username):
         debug('Cascader left: %s' % username)
-        del self.cascaders[username]
+        self.cascaders.removeCascader(username)
         self.updateCascaderLists()
 
     #--------------------------------------------------------------------------
@@ -262,8 +318,10 @@ class CascadersFrame:
 
             if host == self.hostname:
                 labelText += '\n<color="red">You Are Here</color>'
-            elif host in self.cascaderHosts:
-                labelText += '\n<color="blue">Cascading: [%s]</color>' % self.cascaderHosts[host][1]
+            else:
+                cascader = self.cascaders.findCascader(host=host)
+                if cascader is not None:
+                    labelText += '\n<color="blue">Cascading: [%s]</color>' % cascader[1]
 
             x = mx - x
             l = gtk.Label()
@@ -309,19 +367,15 @@ class CascadersFrame:
         ls.clear()
 
         cbSubjects = self.builder.get_object('cbFilterSubject')
-        cbLabs = self.builder.get_object('cbFilterLab')
-        for username, (hostname, subjects) in self.cascaders.iteritems():
-            if username == self.logname:
-                continue
+        filterSub = getComboBoxText(cbSubjects)
+        filterSub = [filterSub] if filterSub != 'All'  else None
 
-            filterSub = getComboBoxText(cbSubjects)
-            if not filterSub in list(subjects) + ['All']:
-                continue
+        cbLab = self.builder.get_object('cbFilterLab')
+        filterLab = getComboBoxText(cbLab)
+        filterLab = filterLab if filterLab != 'All' else None
 
-            lab = self.locator.labFromHostname(hostname)
-            if not getComboBoxText(cbLabs) in ['All', lab]:
-                continue
-
+        cascaders = self.cascaders.findCascaders(lab=filterLab, subjects=filterSub)
+        for username, (hostname, subjects) in cascaders:
             ls.append([username])
 
     #--------------------------------------------------------------------------
