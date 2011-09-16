@@ -99,7 +99,7 @@ class UserToken(object):
             self.subjects.extend(subjects)
             for value in tokens.itervalues():
                 value.conn.root.cascaderAddedSubjects(self.user, subjects)
-        logger.info(self.user + " added " + subjects + " to their subject list")
+        logger.info(self.user + " added " + str(list(subjects)) + " to their subject list")
 
     def exposed_removeSubjects(self, subjects):
         '''
