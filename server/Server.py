@@ -1,5 +1,4 @@
 from __future__ import with_statement
-from rpyc import Service, async
 from rpyc.utils.server import ThreadedServer
 from threading import RLock
 
@@ -53,7 +52,15 @@ class UserToken(object):
         if self.stale:
             return
         self.stale = True
+
+        #Need to inform other clients 
+        with data_lock:
+            for value in tokens.itervalues():
+                #This is a remote produre call to the clients
+                value.conn.root.cascaderLeft(self.user)
+        
         del tokens[self.user] 
+
         
     def exposed_startCascading(self):
         '''
@@ -95,10 +102,11 @@ class UserToken(object):
         notify them and so they can update their local lists
         '''
 
-        with data_lock:
-            self.subjects.extend(subjects)
-            for value in tokens.itervalues():
-                value.conn.root.cascaderAddedSubjects(self.user, subjects)
+        if self.cascading:
+            with data_lock:
+                self.subjects.extend(subjects)
+                for value in tokens.itervalues():
+                    value.conn.root.cascaderAddedSubjects(self.user, subjects)
         logger.info(self.user + " added " + str(list(subjects)) + " to their subject list")
 
     def exposed_removeSubjects(self, subjects):
