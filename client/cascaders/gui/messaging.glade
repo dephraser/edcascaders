@@ -32,6 +32,7 @@
                     <property name="buffer">tbMessages</property>
                   </object>
                   <packing>
+                    <property name="padding">10</property>
                     <property name="position">0</property>
                   </packing>
                 </child>

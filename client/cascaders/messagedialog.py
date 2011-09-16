@@ -1,5 +1,8 @@
 import os
+from logging import debug
+
 import gtk
+
 
 class MessageDialog:
     '''
@@ -65,6 +68,20 @@ class MessageDialog:
 
         btn.connect('clicked', self.onTabCloseClicked, widget)
 
+        i = b.get_object('txCurrentInput')
+        i.connect('key-press-event', self.onKeyPress, textbuff, helpid)
+
+    def onKeyPress(self, window, event, textbuff, helpid):
+        ''' Remap enter to send, shift+enter to new line '''
+        keyname = gtk.gdk.keyval_name(event.keyval)
+        if keyname == "Return":
+            #use shift for a new line, so if shift pressed ignore
+            if event.state & gtk.gdk.SHIFT_MASK:
+                return
+            self.onSendClicked(None, textbuff, helpid)
+            return True
+
+        
     def onTabCloseClicked(self, sender, widget):
         ''' 
         Function hides window when last dialog is closed as there is nothing
