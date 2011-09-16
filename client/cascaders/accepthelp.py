@@ -23,9 +23,11 @@ class AcceptHelpDialog():
         self.window.run()
 
     def onReject(self, e):
+        self.accept = False
         self.window.destroy()
 
     def onAccept(self, e):
+        debug('Cascader accepted')
         self.accept = True
         self.window.destroy()
 

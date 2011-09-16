@@ -198,7 +198,7 @@ class CascadersFrame:
             self.messageDialog.registerMessageCallback(helpid, wf)
 
             self.messageDialog.writeMessage(helpid, 'SYSTEM', 'Accepted Request')
-            self.messageDialog.window.show()
+            self.messageDialog.window.show_all()
 
             return (True, '')
 
@@ -209,8 +209,8 @@ class CascadersFrame:
         debug('Cascader %s added subjects %s' % (username, subjects))
         try: 
             host, curSubjects = self.cascaders[username]
-            self.cascaders[username] = (host, curSubjects + subjects)
-            self.cascaderHosts[hosts] = (username, curSubjects + subjects)
+            self.cascaders[username] = (host, curSubjects + list(subjects))
+            self.cascaderHosts[host] = (username, curSubjects + list(subjects))
         except KeyError:
             warn('Tried to add subjects to cascader %s, prob not cascading' % username)
         self.updateCascaderLists()
@@ -224,14 +224,14 @@ class CascadersFrame:
                     curSubjects.remove(remSubject)
                 except ValueError:
                     pass
-            self.cascaderHosts[hosts] = (username, curSubjects)
+            self.cascaderHosts[host] = (username, curSubjects)
         except KeyError:
             warn('Tried to remove subjects from cascader %s, prob not cascading' % username)
         self.updateCascaderLists()
 
     def onCascaderJoined(self, username, hostname, subjects):
         debug('New cascader: %s' % username)
-        self.cascaders[username] = (hostname, subjects)
+        self.cascaders[username] = (hostname, list(subjects))
         self.updateCascaderLists()
 
     def onCascaderLeft(self, username):
@@ -369,7 +369,7 @@ class CascadersFrame:
             self.messageDialog.registerMessageCallback(helpid, wf)
 
             self.messageDialog.writeMessage(helpid, 'SYSTEM', 'Wating for response')
-            self.messageDialog.window.show()
+            self.messageDialog.window.show_all()
 
             def onResponse(result):
                 accepted, message = result.value
@@ -387,8 +387,6 @@ class CascadersFrame:
                                    helpDialog.getSubject(),
                                    helpDialog.getDescription(),
                                    onResponse )
-
-
     
     def onAddSubject(self, event):
         cb = self.builder.get_object('cbCascSubjectList')

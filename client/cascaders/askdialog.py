@@ -50,8 +50,10 @@ class AskForHelp:
 
         if not len(self.getDescription().strip()):
             errorDialog('There must be a problem description')
+            return True
         elif self.getSubject() is None:
             errorDialog('Must have a subject selected')
+            return True
 
         self.ok = True
         self.window.destroy()
