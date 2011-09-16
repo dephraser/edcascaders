@@ -102,10 +102,11 @@ class UserToken(object):
         notify them and so they can update their local lists
         '''
 
-        with data_lock:
-            self.subjects.extend(subjects)
-            for value in tokens.itervalues():
-                value.conn.root.cascaderAddedSubjects(self.user, subjects)
+        if self.cascading:
+            with data_lock:
+                self.subjects.extend(subjects)
+                for value in tokens.itervalues():
+                    value.conn.root.cascaderAddedSubjects(self.user, subjects)
         logger.info(self.user + " added " + str(list(subjects)) + " to their subject list")
 
     def exposed_removeSubjects(self, subjects):
