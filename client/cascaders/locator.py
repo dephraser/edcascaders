@@ -41,6 +41,9 @@ class Locator():
             warn('No map info for %s: ' % lab)
             return []
 
+    def hasMap(self, lab):
+        return lab in self.labs
+
     def getMapBounds(self, lab):
         try: 
             mx = max([x for h, (x,y) in self.getMap(lab)])

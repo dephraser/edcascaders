@@ -44,6 +44,7 @@ class CascadersFrame:
 
         self.subjects  = [] #list of subjects, retrived from the server
         self.cascaders = {} #list of cascaders, from the server
+        self.cascaderHosts = {} #list of hosts, with cascader, from the server
 
         self.cascadeSubjects = set() #list of subjects the user is cascading in
         self.cascading = False #user cascading
@@ -129,6 +130,7 @@ class CascadersFrame:
             #can't destroy the window as it leads to an exception
             sys.exit(1) 
         self.logname = logname
+        self.hostname = socket.gethostname()
         self.builder.get_object('lbUsername').set(logname)
 
         try:
@@ -136,7 +138,7 @@ class CascadersFrame:
                                            'localhost',
                                            5010,
                                            logname,
-                                           socket.gethostname())
+                                           self.hostname)
 
             if DEBUG:
                 self.client.setAsync(False)
@@ -149,6 +151,7 @@ class CascadersFrame:
                 self.cascaders = {}
                 for usr, host, sub in result.value:
                     self.cascaders[usr] = (host, sub)
+                    self.cascaderHosts[host] = (usr, sub)
                 self.updateCascaderLists()
 
             self.client.getSubjectList(subject)
@@ -206,6 +209,7 @@ class CascadersFrame:
         debug('Cascader %s added subjects %s' % (username, subjects))
         host, curSubjects = self.cascaders[username]
         self.cascaders[username] = (host, curSubjects + subjects)
+        self.cascaderHosts[hosts] = (username, curSubjects + subjects)
         self.updateCascaderLists()
 
     def onCascaderRemovedSubjects(self, username, subjects):
@@ -217,6 +221,7 @@ class CascadersFrame:
                     curSubjects.remove(remSubject)
                 except ValueError:
                     pass
+            self.cascaderHosts[hosts] = (username, curSubjects)
         except KeyError:
             pass
         self.updateCascaderLists()
@@ -239,13 +244,30 @@ class CascadersFrame:
         ''' Rebuilds the map '''
         labMap = self.builder.get_object('tblMap')
         [x.destroy() for x in labMap.get_children()]
+
+        if not self.locator.hasMap(lab):
+            #when "All" is selected, there is no map
+            labMap.resize(1,1)
+            l = gtk.Label()
+            l.set_text('No map')
+            l.show_all()
+            labMap.attach(l, 0,1,0,1)
+            return
+
         mx,my = self.locator.getMapBounds(lab)
         labMap.resize(mx,my)
 
         for host, (x,y) in self.locator.getMap(lab):
+            labelText = host.split('.')[0]
+
+            if host == self.hostname:
+                labelText += '\n<color="red">You Are Here</color>'
+            elif host in self.cascaderHosts:
+                labelText += '\n<color="blue">Cascading: [%s]</color>' % self.cascaderHosts[host][1]
+
             x = mx - x
             l = gtk.Label()
-            l.set_label(host.split('.')[0])
+            l.set_markup(labelText)
             l.show_all()
             labMap.attach(l, x,x+1,y,y+1)
 
