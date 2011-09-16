@@ -153,17 +153,17 @@ gretna:2,8
 lochmuben:3,8
 holywood:4,8
 
-langholm:1,8
-tynron:2,8
-carlaverock:3,8
-dryfesdale:4,8
+langholm:1,9
+tynron:2,9
+carlaverock:3,9
+dryfesdale:4,9
 
 DOOR:8,5
 
 [4.07]
 DOOR:0,0
 
-weiland:1,2
+weiland:2,1
 dumart:2,2
 siebert:2,3
 komisarek:2,4
