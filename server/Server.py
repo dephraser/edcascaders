@@ -1,4 +1,5 @@
 from __future__ import with_statement
+from rpyc import Service 
 from rpyc.utils.server import ThreadedServer
 from threading import RLock
 
