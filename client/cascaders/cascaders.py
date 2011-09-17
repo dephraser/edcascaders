@@ -17,8 +17,6 @@ import dbus.mainloop.glib
 DEBUG = 1
 
 
-mainframe.DEBUG = DEBUG
-
 class RaiseableService(dbusutil.DbusService):
     '''Service provides a method of raising the window to dbus'''
     def __init__(self, interface, path, app):
@@ -45,6 +43,6 @@ if __name__ == '__main__':
             client = dbusutil.DbusClient(interface, path)
             client.showWindow()
         else:
-            win = CascadersFrame()
+            win = CascadersFrame(DEBUG)
             obj = RaiseableService(interface, path, win)
             gtk.main()

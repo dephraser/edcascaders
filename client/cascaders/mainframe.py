@@ -17,7 +17,8 @@ import gobject
 import client
 import service
 
-from locator import Locator
+from map import Locator
+import map
 
 #message boxes
 from accepthelp import AcceptHelpDialog
@@ -26,8 +27,6 @@ from messagedialog import MessageDialog
 
 import util
 from util import getComboBoxText, initTreeView, errorDialog
-
-DEBUG = 0
 
 class Cascaders:
     ''' Manages the cascaders and provides helpful functions '''
@@ -101,9 +100,14 @@ class Cascaders:
 
 
 class CascadersFrame:
-    def __init__(self):
-        self.initGui()
+    def __init__(self, debug=False):
+        '''
+        Enabling debug does things like disable async so errors are more 
+        apparent
+        '''
+        self.debugEnabled = debug
 
+        self.initGui()
         self.trayIcon = gtk.status_icon_new_from_file('icons/cascade32.png')
         self.trayIcon.connect('activate', lambda *a: self.window.show_all())
         self.trayIcon.connect('popup-menu', self.onTrayMenu)
@@ -115,7 +119,7 @@ class CascadersFrame:
             logname = os.environ['LOGNAME']
             
             #for debugging only, means multiple clients can be run at once
-            if DEBUG:
+            if self.debugEnabled:
                 import random
                 logname = str(random.random())
         except KeyError:
@@ -127,6 +131,9 @@ class CascadersFrame:
 
         self.locator = Locator(open('./data/hosts'))
         self.initLabs()
+        
+        #init map
+        self.map = map.Map(self.builder.get_object('tblMap'), self.locator)
 
         self.subjects  = [] #list of subjects, retrived from the server
         self.cascaders = Cascaders(self.locator, self.username) 
@@ -152,6 +159,7 @@ class CascadersFrame:
         self.window = self.builder.get_object('wnCascader')
         self.window.connect('destroy', lambda *a: gtk.main_quit())
         self.builder.connect_signals(self)
+
 
         self.window.show_all()
 
@@ -212,7 +220,7 @@ class CascadersFrame:
                                            self.username,
                                            self.hostname)
 
-            if DEBUG:
+            if self.debugEnabled:
                 self.client.setAsync(False)
 
             def subject(result):
@@ -298,36 +306,7 @@ class CascadersFrame:
     #--------------------------------------------------------------------------
     def updateMap(self, lab):
         ''' Rebuilds the map '''
-        labMap = self.builder.get_object('tblMap')
-        [x.destroy() for x in labMap.get_children()]
-
-        if not self.locator.hasMap(lab):
-            #when "All" is selected, there is no map
-            labMap.resize(1,1)
-            l = gtk.Label()
-            l.set_text('No map')
-            l.show_all()
-            labMap.attach(l, 0,1,0,1)
-            return
-
-        mx,my = self.locator.getMapBounds(lab)
-        labMap.resize(mx,my)
-
-        for host, (x,y) in self.locator.getMap(lab):
-            labelText = host.split('.')[0]
-
-            if host == self.hostname:
-                labelText += '\n<color="red">You Are Here</color>'
-            else:
-                cascader = self.cascaders.findCascader(host=host)
-                if cascader is not None:
-                    labelText += '\n<color="blue">Cascading: [%s]</color>' % cascader[1]
-
-            x = mx - x
-            l = gtk.Label()
-            l.set_markup(labelText)
-            l.show_all()
-            labMap.attach(l, x,x+1,y,y+1)
+        self.map.applyFilter(lab)
 
     def updateAllSubjects(self):
         '''
@@ -361,6 +340,9 @@ class CascadersFrame:
         Cleans the list and updates the list of cascaders avaible. Call
         when filters have been changed
         '''
+        if not hasattr(self, 'cascaders'):
+            return
+
         debug('Cascaders: %s' % self.cascaders)
 
         ls = self.builder.get_object('lsCascList')
