@@ -60,9 +60,10 @@ class Map:
     '''
     Wrapper around a gtk grid that provides an interface as a map
     '''
-    def __init__(self, widget, locator):
+    def __init__(self, widget, locator, cascaders):
         self.widget = widget
         self.locator = locator
+        self.cascaders = cascaders
 
     def setNoMap(self):
         self.widget.resize(1,1)
@@ -71,9 +72,27 @@ class Map:
         l.show_all()
         self.widget.attach(l, 0,1,0,1)
 
-    def applyFilter(self, lab, subjects=None):
+    def _shouldHighlightCascader(self, host, hosts, subjects):
+        cascader = self.cascaders.findCascader(host=host)
+        if not cascader:
+            return False
+
+        username, (host, cascSubjects) = cascader
+        if host not in hosts:
+            return False
+
+        if len(set(cascSubejts) & set(subjects)) == 0:
+            #no intersection
+            return False
+
+        return True
+
+
+
+    def applyFilter(self, lab, myHost=None, hosts=None, subjects=None):
         '''
-        Redraws the map with the given filters applied
+        Redraws the map with the given filters applied, so that only the 
+        cascaders that match the parameters are highlighted
         '''
         [x.destroy() for x in self.widget.get_children()]
 
@@ -86,12 +105,11 @@ class Map:
         for host, (x,y) in self.locator.getMap(lab):
             labelText = host.split('.')[0]
 
-            #if hosts and host == self.hostname:
-            #    labelText += '\n<color="red">You Are Here</color>'
-            #else:
-            #    cascader = self.cascaders.findCascader(host=host)
-            #    if cascader is not None:
-            #        labelText += '\n<color="blue">Cascading: [%s]</color>' % cascader[1]
+            if myHost and host == myHost:
+                labelText += '\n<color="red">You Are Here</color>'
+            elif self._shouldHighlightCascader(host, hosts, subjects):
+                cascader = self.cascaders.findCascader(host=host)
+                labelText += '\n<color="blue">Cascading: [%s]</color>' % cascader[1]
 
             x = mx - x
             l = gtk.Label()

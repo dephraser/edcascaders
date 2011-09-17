@@ -107,7 +107,20 @@ class CascadersFrame:
         '''
         self.debugEnabled = debug
 
+        self.subjects  = [] #list of subjects, retrived from the server
+
+        self.cascadeSubjects = set() #list of subjects the user is cascading in
+        self.cascading = False #user cascading
+
+        self.client = None #client for connection to server
+
+        self.locator = Locator(open('./data/hosts'))
+        self.username = self._getUsername()
+
+        self.cascaders = Cascaders(self.locator, self.username) 
+
         self.initGui()
+
         self.trayIcon = gtk.status_icon_new_from_file('icons/cascade32.png')
         self.trayIcon.connect('activate', lambda *a: self.window.show_all())
         self.trayIcon.connect('popup-menu', self.onTrayMenu)
@@ -115,36 +128,15 @@ class CascadersFrame:
 
         self.messageDialog = MessageDialog()
 
-        try:
-            logname = os.environ['LOGNAME']
-            
-            #for debugging only, means multiple clients can be run at once
-            if self.debugEnabled:
-                import random
-                logname = str(random.random())
-        except KeyError:
-            errorDialog(('Couldn\'t get LOGNAME from the enviroment,'
-                         ' this only runs on Linux at the moment'))
-            #can't destroy the window as it leads to an exception
-            sys.exit(1) 
-        self.username = self.logname = logname
+        self.map = map.Map(self.builder.get_object('tblMap'),
+                           self.locator,
+                           self.cascaders)
 
-        self.locator = Locator(open('./data/hosts'))
         self.initLabs()
-        
-        #init map
-        self.map = map.Map(self.builder.get_object('tblMap'), self.locator)
-
-        self.subjects  = [] #list of subjects, retrived from the server
-        self.cascaders = Cascaders(self.locator, self.username) 
-
-        self.cascadeSubjects = set() #list of subjects the user is cascading in
-        self.cascading = False #user cascading
 
 
         self.initService()
 
-        self.client = None #client for connection to server
         self.initConnection()
 
     def initGui(self):
@@ -159,7 +151,6 @@ class CascadersFrame:
         self.window = self.builder.get_object('wnCascader')
         self.window.connect('destroy', lambda *a: gtk.main_quit())
         self.builder.connect_signals(self)
-
 
         self.window.show_all()
 
@@ -180,6 +171,22 @@ class CascadersFrame:
         cb.set_active(0)
         cb.pack_start(cell, True)
         cb.add_attribute(cell, 'text', 0)
+
+
+    def _getUsername(self):
+        try:
+            logname = os.environ['LOGNAME']
+            
+            #for debugging only, means multiple clients can be run at once
+            if self.debugEnabled:
+                import random
+                logname = str(random.random())
+        except KeyError:
+            errorDialog(('Couldn\'t get LOGNAME from the enviroment,'
+                         ' this only runs on Linux at the moment'))
+            #can't destroy the window as it leads to an exception
+            sys.exit(1) 
+        return logname
 
     #--------------------------------------------------------------------------
     # Connection stuff
@@ -340,9 +347,6 @@ class CascadersFrame:
         Cleans the list and updates the list of cascaders avaible. Call
         when filters have been changed
         '''
-        if not hasattr(self, 'cascaders'):
-            return
-
         debug('Cascaders: %s' % self.cascaders)
 
         ls = self.builder.get_object('lsCascList')
@@ -390,7 +394,7 @@ class CascadersFrame:
 
         if helpDialog.isOk():
             debug('Dialog is ok, asking for help')
-            helpid = (self.logname, util.generateUnqiueId())
+            helpid = (self.username, util.generateUnqiueId())
 
             #add a tab
             self.messageDialog.addTab(helpid, cascaderUsername)
@@ -461,6 +465,11 @@ class CascadersFrame:
     #-- -----------------------------------------------------------------------
 
     def onFilterLabChange(self, evt):
+        '''
+        This is called before a lot of the things are created fully
+        as it is set to its default value. This has to check that things
+        fully exist before calling functions on them
+        '''
         debug('Filter Lab Changed')
 
         self.updateCascaderLists()
