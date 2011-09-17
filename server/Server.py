@@ -125,7 +125,7 @@ class UserToken(object):
                 self.subjects.remove(subject)
             for value in tokens.itervalues():
                 value.conn.root.cascaderRemovedSubjects(self.user, subjects)
-        logger.info(self.user + " removed " + subjects + " from their list")
+        logger.info(self.user + " removed " + str(list(subjects)) + " from their list")
 
     def exposed_getCascaderList(self):
         '''
