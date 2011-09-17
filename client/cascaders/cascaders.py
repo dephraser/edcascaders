@@ -3,14 +3,15 @@ Startup file, responsible for setting up the application and starting the gui
 '''
 
 import logging
+from optparse import OptionParser
+import dbus.service
+import dbus.mainloop.glib
 
 import gtk
 
 import mainframe
 
 import dbusutil
-import dbus.service
-import dbus.mainloop.glib
 
 #--------------
 #Constants
@@ -31,10 +32,17 @@ class RaiseableService(dbusutil.DbusService):
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)
 
+
+
     dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
 
+    parser = OptionParser()
+    parser.add_option('-n', '--noshow', action='store_false')
+    (options, args) = parser.parse_args()
+    showWindow = options.noshow is None
+
     if DEBUG:
-        win = mainframe.CascadersFrame(DEBUG)
+        win = mainframe.CascadersFrame(DEBUG, show=showWindow)
         gtk.main()
     else:
         interface = 'com.compsoc'
@@ -43,6 +51,7 @@ if __name__ == '__main__':
             client = dbusutil.DbusClient(interface, path)
             client.showWindow()
         else:
-            win = CascadersFrame(DEBUG)
+
+            win = CascadersFrame(DEBUG, show=showWindow)
             obj = RaiseableService(interface, path, win)
             gtk.main()

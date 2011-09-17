@@ -8,6 +8,7 @@ from logging import error, warn, debug
 import os
 import sys
 import socket
+import signal
 
 import gtk
 import gtk.glade
@@ -17,9 +18,10 @@ import gobject
 import client
 import service
 
-from map import Locator
 import map
 import settings
+
+from requirements import RequireFunctions
 
 #message boxes
 from accepthelp import AcceptHelpDialog
@@ -111,7 +113,7 @@ class Cascaders:
 
 
 class CascadersFrame:
-    def __init__(self, debugEnabled=False):
+    def __init__(self, debugEnabled=False, show=True):
         '''
         Enabling debug does things like disable async so errors are more 
         apparent
@@ -125,30 +127,29 @@ class CascadersFrame:
 
         self.client = None #client for connection to server
 
-        self.locator = Locator(open('./data/hosts'))
+        self.locator = map.Locator(open('./data/hosts'))
         self.username = self._getUsername()
 
         self.cascaders = Cascaders(self.locator, self.username) 
 
-        self.initGui()
-
-        self.trayIcon = gtk.status_icon_new_from_file('icons/cascade32.png')
-        self.trayIcon.connect('activate', lambda *a: self.window.show_all())
-        self.trayIcon.connect('popup-menu', self.onTrayMenu)
-        self.window.connect('delete-event', lambda w, e: w.hide() or True)
-
         self.messageDialog = MessageDialog(self.locator, self.cascaders)
 
-        self.map = map.Map(self.builder.get_object('tblMap'),
-                           self.locator,
-                           self.cascaders)
+        self.hostname = socket.gethostname()
 
-        self.initLabs()
+        #slightly more sane method of setting things up
+        req = RequireFunctions()
+        req.add('gui', self.initGui)
+        req.add('tray', self.initTray, ['gui'])
+        req.add('map', self.initMap, ['gui'])
+        req.add('labs', self.initLabs, ['map'])
+        req.add('service', self.initService)
+        req.add('connection', self.initConnection, ['service'])
+        req.add('signals', self.initSignals, ['gui', 'settings'])
+        req.add('settings', self.initSettings, ['gui'])
+        req.run()
 
-        self.initService()
-        self.initConnection()
-
-        self.initSettings()
+        if show:
+            self.window.show_all()
 
         if self.settings['asked_autostart'] == False:
             self.settings['asked_autostart'] = True
@@ -162,6 +163,21 @@ class CascadersFrame:
                 self.builder.get_object('cbAutostart').set_active(True)
             message.destroy()
 
+    def initMap(self):
+        self.map = map.Map(self.builder.get_object('tblMap'),
+                           self.locator,
+                           self.cascaders)
+
+    def initTray(self):
+        self.trayIcon = gtk.status_icon_new_from_file('icons/cascade32.png')
+        self.trayIcon.connect('activate', lambda *a: self.window.show_all())
+        self.trayIcon.connect('popup-menu', self.onTrayMenu)
+        self.window.connect('delete-event', lambda w, e: w.hide() or True)
+
+    def initSignals(self):
+        signal.signal(signal.SIGINT, self.quit)
+        signal.signal(signal.SIGTERM, self.quit)
+
     def initGui(self):
         self.builder = gtk.Builder()
 
@@ -174,8 +190,6 @@ class CascadersFrame:
         self.window = self.builder.get_object('wnCascader')
         self.window.connect('destroy', lambda *a: gtk.main_quit())
         self.builder.connect_signals(self)
-
-        self.window.show_all()
 
     def initLabs(self):
         '''
@@ -221,15 +235,10 @@ class CascadersFrame:
             sys.exit(1) 
         return logname
 
-    #--------------------------------------------------------------------------
-    # Connection stuff
     def initService(self):
         '''
         This sets up the service that the client provides to the server.
-
-        This is required for setup
         '''
-
         s = self.service = service.RpcService()
 
         s.registerOnCascaderRemovedSubjects(self.onCascaderRemovedSubjects)
@@ -240,7 +249,6 @@ class CascadersFrame:
 
         s.registerUserAskingForHelp(self.onUserAskingForHelp)
 
-
     def initConnection(self):
         ''' called in the constructor. also does the setup post connect '''
 
@@ -248,7 +256,6 @@ class CascadersFrame:
         status = self.builder.get_object('lbStatus')
         status.set('Connecting...')
 
-        self.hostname = socket.gethostname()
         self.builder.get_object('lbUsername').set(self.username)
 
         try:
@@ -278,6 +285,8 @@ class CascadersFrame:
 
         gobject.io_add_watch(self.client.conn, gobject.IO_IN, self.bgServer)
         status.set('Connected')
+
+    #--------------------------------------------------------------------------
 
     def bgServer(self, source = None, cond = None):
         '''
@@ -344,7 +353,7 @@ class CascadersFrame:
     #--------------------------------------------------------------------------
     def updateMap(self, lab):
         ''' Rebuilds the map '''
-        self.map.applyFilter(lab)
+        self.map.applyFilter(lab, myHost=self.hostname)
 
     def updateAllSubjects(self):
         '''
@@ -397,15 +406,18 @@ class CascadersFrame:
 
     #--------------------------------------------------------------------------
     # GUI events
-    def onQuit(self, *a):
+    def quit(self, *a):
+        debug('Starting shutdown')
         self.settings['cascSubjects'] = list(self.cascadeSubjects)
         self.settings['cascading'] = self.cascading
         self.settings['autostart'] = self.builder.get_object('cbAutostart').get_active()
         self.settings['autocascade'] = self.builder.get_object('cbAutocascade').get_active()
 
-        #quit the gui to try and make everything look snappy
+        #quit the gui to try and make everything look snappy (so we don't lock
+        #when messing around doing IO
         gtk.main_quit()
         settings.saveSettings(self.settings)
+        debug('Finished shutdown, goodbye')
 
     def onStartStopCascading(self, event):
         btn = self.builder.get_object('btStartStopCasc')
@@ -561,7 +573,7 @@ class CascadersFrame:
 
         quit = gtk.MenuItem()
         quit.set_label('Quit')
-        quit.connect('activate', self.onQuit)
+        quit.connect('activate', self.quit)
         menu.append(quit)
 
         menu.show_all()
