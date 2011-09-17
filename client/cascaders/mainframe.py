@@ -86,14 +86,13 @@ class Cascaders:
             if lab and self.locator.labFromHostname(cascHost) != lab:
                 continue
 
-            if subjects and not subjects in cascSubjects:
+            if subjects and len(set(subjects).intersection(set(cascSubjects))) == 0:
                 continue
 
             yield user, (host, cascSubjects)
 
     def findCascader(self, username=None, **kwargs):
         ''' Wrapper around findCascaders, returns the first match or None '''
-        debug('Looking for cascader with username %s ' % username)
         if username is not None:
             if len(kwargs):
                 error('Username not supported with other args')
@@ -182,7 +181,6 @@ class CascadersFrame:
         cb.pack_start(cell, True)
         cb.add_attribute(cell, 'text', 0)
 
-
     def _getUsername(self):
         try:
             logname = os.environ['LOGNAME']
@@ -224,8 +222,6 @@ class CascadersFrame:
         debug('Connecting...')
         status = self.builder.get_object('lbStatus')
         status.set('Connecting...')
-
-
 
         self.hostname = socket.gethostname()
         self.builder.get_object('lbUsername').set(self.username)
@@ -386,9 +382,13 @@ class CascadersFrame:
             btn.set_label('Start Cascading')
         else:
             debug('Starting Cascading')
-            self.cascading = True
-            self.client.startCascading(lambda *a: btn.set_sensitive(True))
-            btn.set_label('Stop Cascading')
+            if len(self.cascadeSubjects) == 0:
+                errorDialog('You cannot start cascading when you no subjects')
+                btn.set_sensitive(True)
+            else:
+                self.cascading = True
+                self.client.startCascading(lambda *a: btn.set_sensitive(True))
+                btn.set_label('Stop Cascading')
 
     def onCascaderClick(self, tv, event):
         if event.button != 1 or event.type != gtk.gdk._2BUTTON_PRESS:
@@ -401,7 +401,7 @@ class CascadersFrame:
         subject = None
         if getComboBoxText(self.builder.get_object('cbFilterSubject')) != 'All':
             subject = getComboBoxText(self.builder.get_object('cbFilterSubject'))
-        helpDialog = AskForHelp(self, self.subjects, subject)
+        helpDialog = AskForHelp(self, cascSubjects, subject)
 
         if helpDialog.isOk():
             debug('Dialog is ok, asking for help')
