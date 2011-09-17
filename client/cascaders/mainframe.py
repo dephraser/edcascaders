@@ -4,7 +4,7 @@ core functionality that the user uses while using the application.
 
 It doesn't handle any functionality outside the frame such as messaging
 '''
-from logging import warn, debug
+from logging import error, warn, debug
 import os
 import sys
 import socket
@@ -91,8 +91,19 @@ class Cascaders:
 
             yield user, (host, cascSubjects)
 
-    def findCascader(self, **kwargs):
+    def findCascader(self, username=None, **kwargs):
         ''' Wrapper around findCascaders, returns the first match or None '''
+        debug('Looking for cascader with username %s ' % username)
+        if username is not None:
+            if len(kwargs):
+                error('Username not supported with other args')
+                return None
+            try:
+                return self.cascaders[username]
+            except KeyError:
+                warn('Couldn\'t find cascader with username: ' % username)
+                return None
+
         try:
             return self.findCascaders(**kwargs).next()
         except StopIteration:
@@ -100,12 +111,12 @@ class Cascaders:
 
 
 class CascadersFrame:
-    def __init__(self, debug=False):
+    def __init__(self, debugEnabled=False):
         '''
         Enabling debug does things like disable async so errors are more 
         apparent
         '''
-        self.debugEnabled = debug
+        self.debugEnabled = debugEnabled
 
         self.subjects  = [] #list of subjects, retrived from the server
 
@@ -126,14 +137,13 @@ class CascadersFrame:
         self.trayIcon.connect('popup-menu', self.onTrayMenu)
         self.window.connect('delete-event', lambda w, e: w.hide() or True)
 
-        self.messageDialog = MessageDialog()
+        self.messageDialog = MessageDialog(self.locator, self.cascaders)
 
         self.map = map.Map(self.builder.get_object('tblMap'),
                            self.locator,
                            self.cascaders)
 
         self.initLabs()
-
 
         self.initService()
 
@@ -178,7 +188,7 @@ class CascadersFrame:
             logname = os.environ['LOGNAME']
             
             #for debugging only, means multiple clients can be run at once
-            if self.debugEnabled:
+            if self.debugEnabled == True:
                 import random
                 logname = str(random.random())
         except KeyError:
@@ -227,7 +237,7 @@ class CascadersFrame:
                                            self.username,
                                            self.hostname)
 
-            if self.debugEnabled:
+            if self.debugEnabled == True:
                 self.client.setAsync(False)
 
             def subject(result):
@@ -262,7 +272,7 @@ class CascadersFrame:
     #--------------------------------------------------------------------------
     # Service callback functions
 
-    def onUserAskingForHelp(self,  helpid, username, subject, description):
+    def onUserAskingForHelp(self,  helpid, username, host, subject, description):
         debug('Help wanted by: %s' % username)
 
         dialog = AcceptHelpDialog(username, subject, description)
@@ -271,7 +281,7 @@ class CascadersFrame:
         if dialog.isAccept():
             debug('Help Accepted')
 
-            self.messageDialog.addTab(helpid, username)
+            self.messageDialog.addTab(helpid, username, self.hostname, host)
 
             #setup functions to write to the messages from the message dialog to
             #the server
@@ -385,6 +395,7 @@ class CascadersFrame:
             return
         model, itr = tv.get_selection().get_selected()
         cascaderUsername = model.get_value(itr, 0)
+        cascHost, cascSubjects = self.cascaders.findCascader(username=cascaderUsername)
         
         #ask user topic, brief description
         subject = None
@@ -397,7 +408,7 @@ class CascadersFrame:
             helpid = (self.username, util.generateUnqiueId())
 
             #add a tab
-            self.messageDialog.addTab(helpid, cascaderUsername)
+            self.messageDialog.addTab(helpid, cascaderUsername, self.hostname, cascHost)
 
             #setup functions to write to the message stuff when messages
             #come from the server to the client

@@ -166,7 +166,7 @@ class UserToken(object):
         logger.info(self.user + " asked " + username + " for help on " + problem + \
                 " in the subject " + subject)
         return tokens[username].conn.root.userAskingForHelp(helpId, self.user, \
-                subject, problem) 
+                self.hostname, subject, problem) 
 
     def exposed_sendMessage(self, helpId, toUser, message):
         '''

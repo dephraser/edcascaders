@@ -14,7 +14,7 @@ import dbus.mainloop.glib
 
 #--------------
 #Constants
-DEBUG = 1
+DEBUG = True
 
 
 class RaiseableService(dbusutil.DbusService):
@@ -34,7 +34,7 @@ if __name__ == '__main__':
     dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
 
     if DEBUG:
-        win = mainframe.CascadersFrame()
+        win = mainframe.CascadersFrame(DEBUG)
         gtk.main()
     else:
         interface = 'com.compsoc'

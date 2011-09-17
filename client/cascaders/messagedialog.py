@@ -3,6 +3,7 @@ from logging import debug
 
 import gtk
 
+from map import Map
 
 class MessageDialog:
     '''
@@ -10,7 +11,10 @@ class MessageDialog:
 
     When the last tab is closed, this will automatically close
     '''
-    def __init__(self):
+    def __init__(self, locator, cascaders):
+        self.locator = locator
+        self.cascaders = cascaders
+
         self.builder = gtk.Builder()
 
         dr = os.path.dirname(__file__)
@@ -25,7 +29,7 @@ class MessageDialog:
 
         self.sendMessage = {}
 
-    def addTab(self, helpid, title):
+    def addTab(self, helpid, title, myHost, cascHost):
         '''
         Adds a tab with a close button
         '''
@@ -66,10 +70,34 @@ class MessageDialog:
         send = b.get_object('btSend')
         send.connect('clicked', self.onSendClicked, textbuff, helpid)
 
+        mapBtn = b.get_object('btMap')
+
+        myLab = self.locator.labFromHostname(myHost) 
+        if myLab is None or myLab != self.locator.labFromHostname(cascHost):
+            mapBtn.set_sensitive(False)
+        else:
+            mapBtn.connect('clicked', self.onMapPressed, myHost, cascHost)
+
         btn.connect('clicked', self.onTabCloseClicked, widget)
 
         i = b.get_object('txCurrentInput')
         i.connect('key-press-event', self.onKeyPress, textbuff, helpid)
+
+    def onMapPressed(self, widgit, myHost, cascHost):
+        dr = os.path.dirname(__file__)
+        builder = gtk.Builder()
+        builder.add_from_file(os.path.join(dr, 'gui', 'map.glade'))
+
+        window = builder.get_object('wnMap')
+
+        map = Map(builder.get_object('tbMap'),
+                  self.locator,
+                  self.cascaders)
+
+        lab = self.locator.labFromHostname(myHost)
+        map.applyFilter(lab, myHost = myHost, hosts=[cascHost])
+
+        window.show_all()
 
     def onKeyPress(self, window, event, textbuff, helpid):
         ''' Remap enter to send, shift+enter to new line '''
@@ -81,7 +109,6 @@ class MessageDialog:
             self.onSendClicked(None, textbuff, helpid)
             return True
 
-        
     def onTabCloseClicked(self, sender, widget):
         ''' 
         Function hides window when last dialog is closed as there is nothing

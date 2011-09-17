@@ -81,13 +81,11 @@ class Map:
         if host not in hosts:
             return False
 
-        if len(set(cascSubejts) & set(subjects)) == 0:
+        if len(set(cascSubjects) & set(subjects)) == 0:
             #no intersection
             return False
 
         return True
-
-
 
     def applyFilter(self, lab, myHost=None, hosts=None, subjects=None):
         '''
