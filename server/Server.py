@@ -54,13 +54,14 @@ class UserToken(object):
             return
         self.stale = True
 
+        del tokens[self.user] 
+
         #Need to inform other clients 
         with data_lock:
             for value in tokens.itervalues():
                 #This is a remote produre call to the clients
                 value.conn.root.cascaderLeft(self.user)
         
-        del tokens[self.user] 
 
         
     def exposed_startCascading(self):
