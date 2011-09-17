@@ -19,6 +19,7 @@ import service
 
 from map import Locator
 import map
+import settings
 
 #message boxes
 from accepthelp import AcceptHelpDialog
@@ -145,8 +146,21 @@ class CascadersFrame:
         self.initLabs()
 
         self.initService()
-
         self.initConnection()
+
+        self.initSettings()
+
+        if self.settings['asked_autostart'] == False:
+            self.settings['asked_autostart'] = True
+            message = gtk.MessageDialog(None,
+                                        gtk.DIALOG_MODAL,
+                                        gtk.MESSAGE_INFO,
+                                        gtk.BUTTONS_YES_NO,
+                                        'Do you want to autostart this program on login?')
+            resp = message.run()
+            if resp == gtk.RESPONSE_YES:
+                self.builder.get_object('cbAutostart').set_active(True)
+            message.destroy()
 
     def initGui(self):
         self.builder = gtk.Builder()
@@ -180,6 +194,17 @@ class CascadersFrame:
         cb.set_active(0)
         cb.pack_start(cell, True)
         cb.add_attribute(cell, 'text', 0)
+
+    def initSettings(self):
+        self.settings = settings.loadSettings()
+
+        self.builder.get_object('cbAutostart').set_active(self.settings['autostart'])
+        self.builder.get_object('cbAutocascade').set_active(self.settings['autocascade'])
+        self.addSubjects(self.settings['cascSubjects'])
+
+        if self.settings['cascading'] and self.settings['autocascade']:
+            #start cascading
+            self.onStartStopCascading(None)
 
     def _getUsername(self):
         try:
@@ -372,6 +397,16 @@ class CascadersFrame:
 
     #--------------------------------------------------------------------------
     # GUI events
+    def onQuit(self, *a):
+        self.settings['cascSubjects'] = list(self.cascadeSubjects)
+        self.settings['cascading'] = self.cascading
+        self.settings['autostart'] = self.builder.get_object('cbAutostart').get_active()
+        self.settings['autocascade'] = self.builder.get_object('cbAutocascade').get_active()
+
+        #quit the gui to try and make everything look snappy
+        gtk.main_quit()
+        settings.saveSettings(self.settings)
+
     def onStartStopCascading(self, event):
         btn = self.builder.get_object('btStartStopCasc')
         btn.set_sensitive(False)
@@ -386,6 +421,21 @@ class CascadersFrame:
                 errorDialog('You cannot start cascading when you no subjects')
                 btn.set_sensitive(True)
             else:
+                #we offer the user to automatically start cascading
+                if self.settings['asked_autocascade'] == False and self.settings['autocascade'] == False:
+                    self.settings['asked_autocascade'] = True
+
+                    message = gtk.MessageDialog(None,
+                                                gtk.DIALOG_MODAL,
+                                                gtk.MESSAGE_INFO,
+                                                gtk.BUTTONS_YES_NO,
+                                                "Do you want to enable auto cascading")
+                    resp = message.run()
+                    if resp == gtk.RESPONSE_YES:
+                        self.builder.get_object('cbAutocascade').set_active(True)
+                    message.destroy()
+
+
                 self.cascading = True
                 self.client.startCascading(lambda *a: btn.set_sensitive(True))
                 btn.set_label('Stop Cascading')
@@ -441,17 +491,20 @@ class CascadersFrame:
     
     def onAddSubject(self, event):
         cb = self.builder.get_object('cbCascSubjectList')
+        self.addSubjects([getComboBoxText(cb)])
+
+    def addSubjects(self, subjects):
         ls = self.builder.get_object('lsCascSubjects')
-        subject = getComboBoxText(cb)
+        for subject in subjects:
+            if subject and not subject in self.cascadeSubjects:
+                debug('Adding subject: %s' % subject)
 
-        if subject and not subject in self.cascadeSubjects:
-            debug('Adding subject: %s' % subject)
-
-            ls.append([subject])
-            self.client.addSubjects([subject])
-            self.cascadeSubjects.add(subject)
+                ls.append([subject])
+                self.client.addSubjects([subject])
+                self.cascadeSubjects.add(subject)
 
         debug('Subjects now: %s' % self.cascadeSubjects)
+
     
     def onRemoveSubject(self, event):
         tv = self.builder.get_object('tvCascSubjects')
@@ -508,7 +561,7 @@ class CascadersFrame:
 
         quit = gtk.MenuItem()
         quit.set_label('Quit')
-        quit.connect('activate', gtk.main_quit)
+        quit.connect('activate', self.onQuit)
         menu.append(quit)
 
         menu.show_all()
