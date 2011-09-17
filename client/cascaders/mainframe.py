@@ -117,6 +117,8 @@ class CascadersFrame:
         '''
         Enabling debug does things like disable async so errors are more 
         apparent
+
+        show should be true to show the windows by default
         '''
         self.debugEnabled = debugEnabled
 
@@ -145,7 +147,7 @@ class CascadersFrame:
         req.add('service', self.initService)
         req.add('connection', self.initConnection, ['service'])
         req.add('signals', self.initSignals, ['gui', 'settings'])
-        req.add('settings', self.initSettings, ['gui'])
+        req.add('settings', self.initSettings, ['gui', 'connection'])
         req.run()
 
         if show:

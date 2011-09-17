@@ -1,39 +1,48 @@
-
+from collections import defaultdict
 
 class RequireFunctions:
     '''
-    This is a brute force attempt at running functions that require
-    other functioins to have been run first
-
-    As said, this is nasty and brute force, there are much nicer ways
-    to do it
+    Used to create a graph of functions that depend on other functions
+    having been run and then correctly run the functions
     '''
 
     def __init__(self):
-        self.lists = []
+        self.resetState()
 
-    def _removeFromAllReq(self, remove):
-        for name, function, req in self.lists:
-            try:
-                req.remove(remove)
-            except ValueError:
-                pass
-
-    def _runOnce(self):
-        for i, (name, function, req) in enumerate(self.lists):
-            if len(req) == 0:
-                function()
-                self._removeFromAllReq(name)
-                self.lists.pop(i)
-                return True
-        return False
+    def resetState(self):
+        self.edges = defaultdict(list)
+        self.readyNodes = []
+        self.nodeCount = 0
 
     def add(self, name, function, requirements = []):
-        self.lists.append((name, function, requirements))
+        '''
+        Add a function to be run
+
+        name - name of the thing to be run
+        function - function itself
+        requirements - other things that this function depends on
+        '''
+        node = (name, function, requirements)
+        self.nodeCount += 1
+        if len(requirements) == 0:
+            self.readyNodes.append(node)
+        else:
+            for req in requirements:
+                self.edges[req].append(node)
 
     def run(self):
-        while True:
-            if len(self.lists) == 0:
-                return
-            if not self._runOnce():
-                raise Exception('Circular depenency detected')
+        '''
+        Topological sort is used to run all functions in the correct order
+        '''
+        doneCount = 0
+        while len(self.readyNodes):
+            name, function, _ = self.readyNodes.pop(0)
+            function()
+            doneCount += 1 
+            for node in self.edges[name]:
+                node[2].remove(name)
+                if len(node[2]) == 0:
+                    self.readyNodes.append(node)
+        if self.nodeCount != doneCount:
+            raise ValueError('Cycle in graph detected, not all functions run')
+        self.resetState()
