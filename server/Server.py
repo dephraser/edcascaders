@@ -104,9 +104,9 @@ class UserToken(object):
         notify them and so they can update their local lists
         '''
 
-        if self.cascading:
-            with data_lock:
-                self.subjects.extend(subjects)
+        with data_lock:
+            self.subjects.extend(subjects)
+            if self.cascading:
                 for value in tokens.itervalues():
                     value.conn.root.cascaderAddedSubjects(self.user, subjects)
         logger.info(self.user + " added " + str(list(subjects)) + " to their subject list")
@@ -121,9 +121,10 @@ class UserToken(object):
         '''
 
         with data_lock:
-            for subject in subjects: self.subjects.remove(subject)
+            for subject in subjects:
+                self.subjects.remove(subject)
             for value in tokens.itervalues():
-                value.conn.root.cascadersRemovedSubjects(self.user, subjects)
+                value.conn.root.cascaderRemovedSubjects(self.user, subjects)
         logger.info(self.user + " removed " + subjects + " from their list")
 
     def exposed_getCascaderList(self):
