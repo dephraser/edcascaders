@@ -466,6 +466,11 @@ class CascadersFrame:
             model.remove(itr)
         debug('Subjects now: %s' % self.cascadeSubjects)
 
+        if len(self.cascadeSubjects) == 0 and self.cascading:
+            debug('No more subjects and we are cascading')
+            self.onStartStopCascading(None)
+
+
     # Filter Stuff
     def onSubjectSelect(self, event):
         self.updateCascaderLists()
