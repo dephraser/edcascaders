@@ -188,6 +188,8 @@ class UserToken(object):
 
         tokens[toUser].message(helpId, message)
 
+        logger.info(self.user + "->" + toUser + ":" + message)
+
     def message(self, helpId, message):
         '''
         Called when some other client on the server wants to send a message to 
