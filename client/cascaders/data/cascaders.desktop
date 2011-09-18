@@ -7,5 +7,5 @@ Name=Cascaders App
 Comment=Helping people find help
 Exec=python cascaders --noshow
 Icon=/home/username/msn/icons/48x48/amsn.png 
-Categories=Application;Network;
+Categories=Education;ComputerScience;
 X-GNOME-Autostart-enabled=true

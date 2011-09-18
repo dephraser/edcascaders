@@ -128,7 +128,7 @@ class Map:
                 labelText += ('\n<span color="blue" underline="single">'
                               'Cascader</span>')
                 tooltip = str(subjects)
-            elif host in helpedHosts:
+            elif helpedHosts and host in helpedHosts:
                 labelText += ('\n<span color="purple">'
                               'User you are helping</span>')
 

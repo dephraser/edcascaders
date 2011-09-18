@@ -28,9 +28,15 @@ class MessageDialog:
 
         self.sendMessage = {}
 
-    def addTab(self, helpid, title, myHost, cascHost):
+    def addTab(self, helpid, title, myHost, cascHost, iAmCascader):
         '''
         Adds a tab with a close button
+
+        helpid - system wide unique help id
+        title - the title of the tab
+        myHost - this clients hostname
+        cascHost - the other clients hostname
+        iAmCascader - true if this client is the cascader
         '''
         #hbox will be used to store a label and button, as notebook tab title
         hbox = gtk.HBox(False, 0)
@@ -80,13 +86,14 @@ class MessageDialog:
         if myLab is None or myLab != self.locator.labFromHostname(cascHost):
             mapBtn.set_sensitive(False)
         else:
-            mapBtn.connect('clicked', self.onMapPressed, myHost, cascHost)
+            mapBtn.connect('clicked', self.onMapPressed,
+                           myHost, cascHost, iAmCascader)
 
         #remap some key events
         i = b.get_object('txCurrentInput')
         i.connect('key-press-event', self.onKeyPress, textbuff, helpid)
 
-    def onMapPressed(self, widgit, myHost, cascHost):
+    def onMapPressed(self, widgit, myHost, cascHost, iAmCascader):
         dr = os.path.dirname(__file__)
         builder = gtk.Builder()
         builder.add_from_file(os.path.join(dr, 'gui', 'map.glade'))
@@ -98,12 +105,14 @@ class MessageDialog:
                         self.cascaders)
 
         lab = self.locator.labFromHostname(myHost)
-        #FIXME this is bad, we don't know if the opposing side is a
-        #user or cascader so we try both, which might fail in some cases
+
+        cascHost = [cascHost] if not iAmCascader else None
+        helpHost = [cascHost] if iAmCascader else None
+
         mapWidgit.applyFilter(lab,
                               myHost = myHost,
-                              cascaderHosts=[cascHost],
-                              helpedHosts=[cascHost])
+                              cascaderHosts=cascHost,
+                              helpedHosts=helpHost)
 
         window.show_all()
 

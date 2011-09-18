@@ -333,7 +333,8 @@ class CascadersFrame:
         if dialog.isAccept():
             debug('Help Accepted')
 
-            self.messageDialog.addTab(helpid, username, self.hostname, host)
+            self.messageDialog.addTab(helpid, username,
+                                      self.hostname, host, True)
 
             #setup functions to write to the messages from the message dialog to
             #the server
@@ -506,7 +507,8 @@ class CascadersFrame:
             helpid = (self.username, util.generateUnqiueId())
 
             #add a tab
-            self.messageDialog.addTab(helpid, cascaderUsername, self.hostname, cascHost)
+            self.messageDialog.addTab(helpid, cascaderUsername, self.hostname,
+                                      cascHost, False)
 
             #setup functions to write to the message stuff when messages
             #come from the server to the client
