@@ -138,7 +138,8 @@ class CascadersFrame:
 
         self.client = None #client for connection to server
 
-        self.locator = labmap.Locator(open('./data/hosts'))
+        hosts = os.path.join(os.path.dirname(__file__), 'data', 'hosts')
+        self.locator = labmap.Locator(open(hosts))
         self.username = self._getUsername()
 
         self.cascaders = Cascaders(self.locator, self.username) 
@@ -182,7 +183,10 @@ class CascadersFrame:
                               self.cascaders)
 
     def initTray(self):
-        self.trayIcon = gtk.status_icon_new_from_file('icons/cascade32.png')
+        icon = os.path.join(os.path.dirname(__file__),
+                            'icons',
+                            'cascade32.png')
+        self.trayIcon = gtk.status_icon_new_from_file(icon)
         self.trayIcon.connect('activate', lambda *a: self.window.show_all())
         self.trayIcon.connect('popup-menu', self.onTrayMenu)
         self.window.connect('delete-event', lambda w, e: w.hide() or True)
