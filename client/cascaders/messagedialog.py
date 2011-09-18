@@ -61,7 +61,7 @@ class MessageDialog:
         b.add_from_file(os.path.join(dr, 'gui', 'messaging.glade'))
         widget = b.get_object('frMessageFrame')
         self.messageBuffers[helpid] = b.get_object('tbMessages')
-        widget.unparent()
+        widget.reparent(self.window)
         widget.show_all()
 
         btn.connect('clicked', self.onTabCloseClicked, widget)
