@@ -156,7 +156,8 @@ class MessageDialog:
 
     def writeMessage(self, helpid, frm, msg):
         '''
-        Writes a message to the correct message box 
+        Writes a message to the correct message box, if the user
+        has closed the dialog, then it will be re-shown
         '''
         buff = self.messageBuffers[helpid]
         text = '[%s] %s\n' % (frm, msg)

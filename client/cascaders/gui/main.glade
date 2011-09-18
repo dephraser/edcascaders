@@ -16,6 +16,8 @@
   </object>
   <object class="GtkWindow" id="wnCascader">
     <property name="title" translatable="yes">Cascaders App</property>
+    <property name="default_width">600</property>
+    <property name="default_height">400</property>
     <child>
       <object class="GtkHBox" id="hbox1">
         <property name="visible">True</property>
