@@ -94,10 +94,10 @@ class Map:
             return False
 
         username, (host, cascSubjects) = cascader
-        if hosts and host not in hosts:
+        if hosts is not None and host not in hosts:
             return False
 
-        if subjects and len(set(cascSubjects).intersection(set(subjects))) == 0:
+        if subjects is not None and len(set(cascSubjects).intersection(set(subjects))) == 0:
             return False
 
         return True
@@ -120,17 +120,17 @@ class Map:
             labelText = host.split('.')[0]
 
             tooltip = None
-            if myHost and host == myHost:
-                labelText += '\n<span color="red">You Are Here</span>'
+            if myHost is not None and host == myHost:
+                labelText += '\n<span color="red">You</span>'
             elif self._shouldHighlightCascader(host, cascaderHosts, subjects):
                 cascader = self.cascaders.findCascader(host=host)
                 username, (host, subjects) = cascader
                 labelText += ('\n<span color="blue" underline="single">'
                               'Cascader</span>')
                 tooltip = str(subjects)
-            elif helpedHosts and host in helpedHosts:
+            elif helpedHosts is not None and host in helpedHosts:
                 labelText += ('\n<span color="purple">'
-                              'User you are helping</span>')
+                              'User</span>')
 
             y = my - y
 

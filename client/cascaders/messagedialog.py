@@ -14,6 +14,8 @@ class MessageDialog:
         self.locator = locator
         self.cascaders = cascaders
 
+        self.closedPages = {}
+
         self.builder = gtk.Builder()
 
         dr = os.path.dirname(__file__)
@@ -28,16 +30,7 @@ class MessageDialog:
 
         self.sendMessage = {}
 
-    def addTab(self, helpid, title, myHost, cascHost, iAmCascader):
-        '''
-        Adds a tab with a close button
-
-        helpid - system wide unique help id
-        title - the title of the tab
-        myHost - this clients hostname
-        cascHost - the other clients hostname
-        iAmCascader - true if this client is the cascader
-        '''
+    def _getTabLabel(self, title, widget, helpid):
         #hbox will be used to store a label and button, as notebook tab title
         hbox = gtk.HBox(False, 0)
         label = gtk.Label(title)
@@ -59,7 +52,21 @@ class MessageDialog:
         style.ythickness = 0
         btn.modify_style(style)
 
+        btn.connect('clicked', self.onTabCloseClicked, widget, title, helpid)
+
         hbox.show_all()
+        return hbox
+
+    def addTab(self, helpid, title, myHost, cascHost, iAmCascader):
+        '''
+        Adds a tab with a close button
+
+        helpid - system wide unique help id
+        title - the title of the tab
+        myHost - this clients hostname
+        cascHost - the other clients hostname
+        iAmCascader - true if this client is the cascader
+        '''
 
         #this is a bit nasty, but it ensures we aren't reusing an object
         b = gtk.Builder()
@@ -70,7 +77,8 @@ class MessageDialog:
         widget.reparent(self.window)
         widget.show_all()
 
-        btn.connect('clicked', self.onTabCloseClicked, widget)
+        hbox = self._getTabLabel(title, widget, helpid)
+
         
         self.notebook.insert_page(widget, hbox)
         
@@ -93,23 +101,24 @@ class MessageDialog:
         i = b.get_object('txCurrentInput')
         i.connect('key-press-event', self.onKeyPress, textbuff, helpid)
 
-    def onMapPressed(self, widgit, myHost, cascHost, iAmCascader):
+    def onMapPressed(self, widget, myHost, cascHost, iAmCascader):
         dr = os.path.dirname(__file__)
         builder = gtk.Builder()
         builder.add_from_file(os.path.join(dr, 'gui', 'map.glade'))
 
         window = builder.get_object('wnMap')
 
-        mapWidgit = Map(builder.get_object('tbMap'),
+        mapwidget = Map(builder.get_object('tbMap'),
                         self.locator,
                         self.cascaders)
 
         lab = self.locator.labFromHostname(myHost)
 
-        cascHost = [cascHost] if not iAmCascader else None
+        #pick what to highlight
         helpHost = [cascHost] if iAmCascader else None
+        cascHost = [cascHost] if not iAmCascader else []
 
-        mapWidgit.applyFilter(lab,
+        mapwidget.applyFilter(lab,
                               myHost = myHost,
                               cascaderHosts=cascHost,
                               helpedHosts=helpHost)
@@ -126,12 +135,13 @@ class MessageDialog:
             self.onSendClicked(None, textbuff, helpid)
             return True
 
-    def onTabCloseClicked(self, sender, widget):
+    def onTabCloseClicked(self, sender, widget, title, helpid):
         ''' 
         Function hides window when last dialog is closed as there is nothing
         else to display
         '''
         pagenum = self.notebook.page_num(widget)
+        self.closedPages[helpid] = (title, widget)
         self.notebook.remove_page(pagenum)
 
         if self.notebook.get_n_pages() == 0:
@@ -151,6 +161,15 @@ class MessageDialog:
         buff = self.messageBuffers[helpid]
         text = '[%s] %s\n' % (frm, msg)
         buff.insert(buff.get_end_iter(), text)
+
+        if helpid in self.closedPages:
+            title, widget = self.closedPages[helpid]
+            hbox = self._getTabLabel(title, widget, helpid)
+            self.notebook.insert_page(widget, hbox)
+            del self.closedPages[helpid]
+
+        if not self.window.flags() & gtk.VISIBLE:
+            self.window.show_all()
 
     def registerMessageCallback(self, helpid, f):
         '''

@@ -122,7 +122,7 @@ HOST = 'localhost'
 #-------------------------------------------------------------------------------
 
 class CascadersFrame:
-    def __init__(self, debugEnabled=False, show=True):
+    def __init__(self, debugEnabled=False, show=True, host=None):
         '''
         Enabling debug does things like disable async so errors are more 
         apparent
@@ -146,7 +146,10 @@ class CascadersFrame:
 
         self.messageDialog = MessageDialog(self.locator, self.cascaders)
 
-        self.hostname = socket.gethostname().lower()
+        if host is None:
+            self.hostname = socket.gethostname().lower()
+        else:
+            self.hostname = host
 
         #slightly more sane method of setting things up that uses depency
         #tracking
@@ -329,7 +332,7 @@ class CascadersFrame:
 
     def onUserAskingForHelp(self,  helpid, username, host,
                             subject, description):
-        debug('Help wanted by: %s' % username)
+        debug('Help wanted by: %s with host %s' % (username, host))
 
         dialog = AcceptHelpDialog(self.window, username, subject, description)
 
@@ -337,6 +340,7 @@ class CascadersFrame:
         if dialog.isAccept():
             debug('Help Accepted')
 
+            print 'Ok, host is %s' % host
             self.messageDialog.addTab(helpid, username,
                                       self.hostname, host, True)
 
@@ -499,6 +503,8 @@ class CascadersFrame:
 
     def askForHelp(self, cascaderUsername):
         (_, (cascHost, cascSubjects)) = self.cascaders.findCascader(username=cascaderUsername)
+
+        print 'Cascader host is %s' % cascHost
         
         #ask user topic, brief description
         subject = None

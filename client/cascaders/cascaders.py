@@ -33,6 +33,9 @@ if __name__ == '__main__':
     parser.add_option('-d', '--debug', action='store_false',
                       help='start with debug mode on. This is a lot slower')
 
+    parser.add_option('', '--host',
+                      help='manually set the host')
+
     (options, args) = parser.parse_args()
     showWindow = options.noshow is None
     debugEnabled = options.debug is not None
@@ -49,6 +52,8 @@ if __name__ == '__main__':
         client = dbusutil.DbusClient(interface, path)
         client.showWindow()
     else:
-        win = mainframe.CascadersFrame(debugEnabled, show=showWindow)
+        win = mainframe.CascadersFrame(debugEnabled,
+                                       show=showWindow,
+                                       host=options.host)
         obj = RaiseableService(interface, path, win)
         gtk.main()
