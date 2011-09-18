@@ -28,10 +28,10 @@ data_lock = RLock()
 tokens = dict()
 
 
-subjectList = ["inf1-fp","inf1-cl","inf1-da","inf1-op","inf2a","inf2b","inf2c-cs",
+subjectList = set(["inf1-fp","inf1-cl","inf1-da","inf1-op","inf2a","inf2b","inf2c-cs",
         "inf2-se","inf2d","Java","Haskell","Python","Ruby","C","C++","PHP",
         "JavaScript", "Perl", "SQL", "Bash", "Vim", "Emacs", "Eclipse", "Netbeans",
-        "Version Control"]
+        "Version Control"])
 
 class UserToken(object):
     def __init__(self, conn, user, hostname):
@@ -40,7 +40,7 @@ class UserToken(object):
         self.hostname = hostname
         self.stale = False
         self.cascading = False
-        self.subjects = []
+        self.subjects = set()
         tokens[user]=self
     
     def exposed_logout(self):
@@ -61,7 +61,6 @@ class UserToken(object):
             for value in tokens.itervalues():
                 #This is a remote produre call to the clients
                 value.conn.root.cascaderLeft(self.user)
-        
 
         
     def exposed_startCascading(self):
@@ -104,8 +103,11 @@ class UserToken(object):
         notify them and so they can update their local lists
         '''
 
+        #strip out things not listed in the valid subjects
+        subjects = set(subjects).intersection(subjectList)
+
         with data_lock:
-            self.subjects.extend(subjects)
+            self.subjects.update(subjects)
             if self.cascading:
                 for value in tokens.itervalues():
                     value.conn.root.cascaderAddedSubjects(self.user, subjects)
@@ -119,10 +121,15 @@ class UserToken(object):
         It will also envoke cascaderRemovedSubjects on all clients connected to 
         notify them and so they can update their local lists
         '''
+        subjects = set(subjects).intersection(subjectList)
 
         with data_lock:
             for subject in subjects:
-                self.subjects.remove(subject)
+                try:
+                    self.subjects.remove(subject)
+                except KeyError:
+                    #item wasn't in set, ignore
+                    logger.warn('Tried to remove %s from subjects, failed' % subject)
             for value in tokens.itervalues():
                 value.conn.root.cascaderRemovedSubjects(self.user, subjects)
         logger.info(self.user + " removed " + str(list(subjects)) + " from their list")
@@ -192,6 +199,12 @@ class UserToken(object):
         '''
 
         self.conn.root.userSentMessage(helpId, message)
+
+    def exposed_ping(self):
+        '''
+        Can be used to see that the server is up and functioning
+        '''
+        return 'pong'
     
     def exposed_eval(self, code):
         raise NotImplementedError('In your dreams')
@@ -215,7 +228,6 @@ class ChatService(Service):
         else:
             self.token = UserToken(self._conn, username, hostname)
             return self.token
-
 
 if __name__ == "__main__":
     t = ThreadedServer(ChatService, port = 5010)
