@@ -28,7 +28,7 @@ class AskForHelp:
         cb = self.builder.get_object('cbSubject')
         ls = gtk.ListStore(gobject.TYPE_STRING)
         cb.set_model(ls)
-        for i,subject in enumerate(subjects):
+        for i, subject in enumerate(subjects):
             ls.append([subject])
             if subject == currentSubject:
                 cb.set_active(i)

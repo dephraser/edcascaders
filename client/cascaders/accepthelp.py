@@ -14,7 +14,9 @@ class AcceptHelpDialog():
         self.window = builder.get_object('dgHelpAcceptReject')
         if parentWindow is not None:
             self.window.set_transient_for(parentWindow)
-        builder.get_object('lbUserInfo').set_label('%s is wanting help on %s' % (username, subject))
+
+        heading = '%s is wanting help on %s' % (username, subject)
+        builder.get_object('lbUserInfo').set_label(heading)
         builder.get_object('lbDesc').set_label(description)
         builder.connect_signals(self)
 

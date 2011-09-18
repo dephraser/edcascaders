@@ -1,9 +1,8 @@
 import os
-from logging import debug
 
 import gtk
 
-from map import Map
+from labmap import Map
 
 class MessageDialog:
     '''
@@ -94,12 +93,12 @@ class MessageDialog:
 
         window = builder.get_object('wnMap')
 
-        map = Map(builder.get_object('tbMap'),
-                  self.locator,
-                  self.cascaders)
+        mapWidgit = Map(builder.get_object('tbMap'),
+                        self.locator,
+                        self.cascaders)
 
         lab = self.locator.labFromHostname(myHost)
-        map.applyFilter(lab, myHost = myHost, hosts=[cascHost])
+        mapWidgit.applyFilter(lab, myHost = myHost, hosts=[cascHost])
 
         window.show_all()
 

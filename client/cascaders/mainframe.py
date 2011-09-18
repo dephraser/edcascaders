@@ -18,7 +18,7 @@ import gobject
 import client
 import service
 
-import map
+import labmap
 import settings
 
 from requirements import RequireFunctions
@@ -63,19 +63,21 @@ class Cascaders:
             host, curSubjects = self.cascaders[username]
             self.cascaders[username] = (host, curSubjects + list(subjects))
         except KeyError:
-            warn('Cascader (%s) that added subjects didn\'t exist (maybe this user)' % username)
+            warn('Cascader (%s) that added subjects '
+                 'didn\'t exist (maybe this user)' % username)
 
     def removeCascaderSubjects(self, username, subjects):
         debug('Cascader %s removed subjects %s' % (username, subjects))
         try: 
-            host, curSubjects = self.cascaders[username]
+            curSubjects = self.cascaders[username][1]
             for remSubject in subjects:
                 try:
                     curSubjects.remove(remSubject)
                 except ValueError:
                     debug('User wasn\'t cascading subject %s' % remSubject)
         except KeyError:
-            warn('Tried to remove subjects from cascader %s, prob not cascading or this user' % username)
+            warn('Tried to remove subjects from cascader %s, '
+                 'prob not cascading or this user' % username)
 
     def findCascaders(self, lab=None, subjects=None, host=None):
         '''
@@ -90,7 +92,8 @@ class Cascaders:
             if lab and self.locator.labFromHostname(cascHost) != lab:
                 continue
 
-            if subjects and len(set(subjects).intersection(set(cascSubjects))) == 0:
+            if (subjects and
+                    len(set(subjects).intersection(set(cascSubjects))) == 0):
                 continue
 
             yield user, (host, cascSubjects)
@@ -135,7 +138,7 @@ class CascadersFrame:
 
         self.client = None #client for connection to server
 
-        self.locator = map.Locator(open('./data/hosts'))
+        self.locator = labmap.Locator(open('./data/hosts'))
         self.username = self._getUsername()
 
         self.cascaders = Cascaders(self.locator, self.username) 
@@ -166,16 +169,17 @@ class CascadersFrame:
                                         gtk.DIALOG_MODAL,
                                         gtk.MESSAGE_INFO,
                                         gtk.BUTTONS_YES_NO,
-                                        'Do you want to autostart this program on login?')
+                                        ('Do you want to autostart this '
+                                         'program on login?'))
             resp = message.run()
             if resp == gtk.RESPONSE_YES:
                 self.builder.get_object('cbAutostart').set_active(True)
             message.destroy()
 
     def initMap(self):
-        self.map = map.Map(self.builder.get_object('tblMap'),
-                           self.locator,
-                           self.cascaders)
+        self.map = labmap.Map(self.builder.get_object('tblMap'),
+                              self.locator,
+                              self.cascaders)
 
     def initTray(self):
         self.trayIcon = gtk.status_icon_new_from_file('icons/cascade32.png')
@@ -217,8 +221,11 @@ class CascadersFrame:
     def initSettings(self):
         self.settings = settings.loadSettings()
 
-        self.builder.get_object('cbAutostart').set_active(self.settings['autostart'])
-        self.builder.get_object('cbAutocascade').set_active(self.settings['autocascade'])
+        autostart = self.settings['autostart']
+        self.builder.get_object('cbAutostart').set_active(autostart)
+        autocascade = self.settings['autocascade']
+        self.builder.get_object('cbAutocascade').set_active(autocascade)
+
         self.addSubjects(self.settings['cascSubjects'])
 
         if self.settings['cascading'] and self.settings['autocascade']:
@@ -316,7 +323,8 @@ class CascadersFrame:
     # Service callback functions, most of these are just simple wrappers
     # around the cascaders class.
 
-    def onUserAskingForHelp(self,  helpid, username, host, subject, description):
+    def onUserAskingForHelp(self,  helpid, username, host,
+                            subject, description):
         debug('Help wanted by: %s' % username)
 
         dialog = AcceptHelpDialog(self.window, username, subject, description)
@@ -484,7 +492,7 @@ class CascadersFrame:
         cascaderUsername = model.get_value(itr, 0)
         self.askForHelp(cascaderUsername)
 
-    def askForHelp(self, casccaderUsername):
+    def askForHelp(self, cascaderUsername):
         (_, (cascHost, cascSubjects)) = self.cascaders.findCascader(username=cascaderUsername)
         
         #ask user topic, brief description
@@ -517,9 +525,13 @@ class CascadersFrame:
                 accepted, message = result.value
                 wf = self.messageDialog.writeMessage
                 if accepted:
-                    wf(helpid, 'SYSTEM', cascaderUsername + ' accepted your help request')
+                    wf(helpid,
+                       'SYSTEM',
+                       cascaderUsername + ' accepted your help request')
                 else:
-                    wf(helpid, 'SYSTEM', cascaderUsername + ' rejected your help request')
+                    wf(helpid,
+                       'SYSTEM',
+                       cascaderUsername + ' rejected your help request')
                     
                     if message:
                         wf(helpid, cascaderUsername, message)
@@ -528,7 +540,7 @@ class CascadersFrame:
                                    cascaderUsername,
                                    helpDialog.getSubject(),
                                    helpDialog.getDescription(),
-                                   onResponse )
+                                   onResponse)
     
     def onAddSubject(self, event):
         cb = self.builder.get_object('cbCascSubjectList')
@@ -600,7 +612,8 @@ class CascadersFrame:
         def onHostClick(event, widgit, host):
             casc = self.cascaders.findCascader(host=host, subjects=filterSub)
             if casc is None:
-                debug('Clicked on a host (%s) that wasn\'t cascading for the given filter' % host)
+                debug('Clicked on a host (%s) that wasn\'t '
+                      'cascading for the given filter' % host)
                 return
             (username, _) = casc
             self.askForHelp(username)
@@ -618,10 +631,10 @@ class CascadersFrame:
         '''
         menu = gtk.Menu()
 
-        quit = gtk.MenuItem()
-        quit.set_label('Quit')
-        quit.connect('activate', self.quit)
-        menu.append(quit)
+        quitItem = gtk.MenuItem()
+        quitItem.set_label('Quit')
+        quitItem.connect('activate', self.quit)
+        menu.append(quitItem)
 
         menu.show_all()
         menu.popup(None,

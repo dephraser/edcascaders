@@ -20,7 +20,7 @@ class Locator():
         '''
         Fairly relaxed configuration parser for the location string
         '''
-        x,y = location.split(',')
+        x, y = location.split(',')
         return int(x.strip()),  int(y.strip())
 
     def __init__(self, fileHandle):
@@ -40,7 +40,7 @@ class Locator():
     def getLabs(self):
         return self.hosts.sections()
 
-    def labFromHostname(self,hostname):
+    def labFromHostname(self, hostname):
         try:
             return self.hostsLab[hostname]
         except KeyError:
@@ -63,12 +63,12 @@ class Locator():
         is assumed to be 0,0 as (at present) this is how the data is setup
         '''
         try: 
-            mx = max([x for h, (x,y) in self.getMap(lab)])
-            my = max([y for h, (x,y) in self.getMap(lab)])
+            mx = max([x for h, (x, y) in self.getMap(lab)])
+            my = max([y for h, (x, y) in self.getMap(lab)])
             return mx, my
         except ValueError:
             warn('No host info for %s: ' % lab)
-            return 0,0
+            return 0, 0
 
 
 class Map:
@@ -82,11 +82,11 @@ class Map:
         self.cascaders = cascaders
 
     def setNoMap(self):
-        self.widget.resize(1,1)
+        self.widget.resize(1, 1)
         l = gtk.Label()
         l.set_text('No map')
         l.show_all()
-        self.widget.attach(l, 0,1,0,1)
+        self.widget.attach(l, 0, 1, 0, 1)
 
     def _shouldHighlightCascader(self, host, hosts, subjects):
         cascader = self.cascaders.findCascader(host=host)
@@ -113,10 +113,10 @@ class Map:
         if not self.locator.hasMap(lab):
             return self.setNoMap()
 
-        mx,my = self.locator.getMapBounds(lab)
-        self.widget.resize(mx,my)
+        mx, my = self.locator.getMapBounds(lab)
+        self.widget.resize(mx, my)
 
-        for host, (x,y) in self.locator.getMap(lab):
+        for host, (x, y) in self.locator.getMap(lab):
             labelText = host.split('.')[0]
 
             tooltip = None
@@ -124,8 +124,10 @@ class Map:
                 labelText += '\n<span color="red">You Are Here</span>'
             elif self._shouldHighlightCascader(host, hosts, subjects):
                 cascader = self.cascaders.findCascader(host=host)
-                labelText += '\n<span color="blue" underline="single">Cascader</span>'
-                tooltip = str(cascader[1]) #subjects
+                username, (host, subjects) = cascader
+                labelText += ('\n<span color="blue" underline="single">'
+                              'Cascader</span>')
+                tooltip = str(subjects)
 
             x = mx - x
 
@@ -142,4 +144,4 @@ class Map:
                 eb.connect('button-press-event', onClick, host)
 
             eb.show_all()
-            self.widget.attach(eb, x,x+1,y,y+1)
+            self.widget.attach(eb, x, x+1, y, y+1)

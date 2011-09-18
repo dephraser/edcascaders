@@ -11,6 +11,10 @@ class RpcService(rpyc.Service):
     for simplicity you can only have one callback registered
     '''
     def __init__(self):
+        #TODO this needs fixing so it can actually pass the connection in
+        #but it is a PITA to fix as the class really should be created by
+        #the rpyc connection so we run into an issue with setting up callbacks
+        super(RpcService, self).__init__(None)
         self.messageFunctions = {}
         self.userAskingForHelp = None
 
@@ -24,7 +28,8 @@ class RpcService(rpyc.Service):
     def registerUserAskingForHelp(self, func):
         self.userAskingForHelp = func
 
-    def exposed_userAskingForHelp(self, helpId, username, hostname, subject, description):
+    def exposed_userAskingForHelp(self, helpId, username,
+                                  hostname, subject, description):
         '''
         Called from the Server to the Cascader when a user asks for help.
 
@@ -39,7 +44,8 @@ class RpcService(rpyc.Service):
 
         This is response is then passed back to the user as 
         '''
-        return self.userAskingForHelp(helpId, username, hostname, subject, description)
+        return self.userAskingForHelp(helpId, username,
+                                      hostname, subject, description)
 
     #--------
 
@@ -95,3 +101,6 @@ class RpcService(rpyc.Service):
 
     def exposed_eval(self, code):
         raise NotImplementedError('Not going to happen')
+
+    def exposed_ping(self):
+        return 'pong'

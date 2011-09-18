@@ -14,7 +14,7 @@ class RequireFunctions:
         self.readyNodes = []
         self.nodeCount = 0
 
-    def add(self, name, function, requirements = []):
+    def add(self, name, function, requirements = None):
         '''
         Add a function to be run when its requirements are met
 
@@ -22,6 +22,9 @@ class RequireFunctions:
         function - function itself
         requirements - other things that this function depends on
         '''
+        if requirements is None: #avoid default mutable args headache
+            requirements = []
+
         node = (name, function, requirements)
         self.nodeCount += 1
         if len(requirements) == 0:

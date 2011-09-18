@@ -33,7 +33,7 @@ def initTreeView(tv):
     column = gtk.TreeViewColumn()
     cell = gtk.CellRendererText()
     column.pack_start(cell)
-    column.add_attribute(cell,'text',0)
+    column.add_attribute(cell, 'text', 0)
     tv.append_column(column)
     tv.set_headers_visible(False)
 
