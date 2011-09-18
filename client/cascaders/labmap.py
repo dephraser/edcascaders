@@ -129,7 +129,7 @@ class Map:
                               'Cascader</span>')
                 tooltip = str(subjects)
 
-            x = mx - x
+            y = my - y
 
             eb = gtk.EventBox()
             label = gtk.Label()
