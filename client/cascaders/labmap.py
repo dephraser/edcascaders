@@ -102,8 +102,8 @@ class Map:
 
         return True
 
-    def applyFilter(self, lab, myHost=None, hosts=None, subjects=None,
-                    onClick=None):
+    def applyFilter(self, lab, myHost=None, cascaderHosts=None,
+                    helpedHosts=None, subjects=None, onClick=None):
         '''
         Redraws the map with the given filters applied, so that only the 
         cascaders that match the parameters are highlighted
@@ -122,12 +122,15 @@ class Map:
             tooltip = None
             if myHost and host == myHost:
                 labelText += '\n<span color="red">You Are Here</span>'
-            elif self._shouldHighlightCascader(host, hosts, subjects):
+            elif self._shouldHighlightCascader(host, cascaderHosts, subjects):
                 cascader = self.cascaders.findCascader(host=host)
                 username, (host, subjects) = cascader
                 labelText += ('\n<span color="blue" underline="single">'
                               'Cascader</span>')
                 tooltip = str(subjects)
+            elif host in helpedHosts:
+                labelText += ('\n<span color="purple">'
+                              'User you are helping</span>')
 
             y = my - y
 

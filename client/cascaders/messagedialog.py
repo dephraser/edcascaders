@@ -98,7 +98,12 @@ class MessageDialog:
                         self.cascaders)
 
         lab = self.locator.labFromHostname(myHost)
-        mapWidgit.applyFilter(lab, myHost = myHost, hosts=[cascHost])
+        #FIXME this is bad, we don't know if the opposing side is a
+        #user or cascader so we try both, which might fail in some cases
+        mapWidgit.applyFilter(lab,
+                              myHost = myHost,
+                              cascaderHosts=[cascHost],
+                              helpedHosts=[cascHost])
 
         window.show_all()
 
