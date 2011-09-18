@@ -173,8 +173,15 @@ class UserToken(object):
 
         logger.info(self.user + " asked " + username + " for help on " + problem + \
                 " in the subject " + subject)
-        return tokens[username].conn.root.userAskingForHelp(helpId, self.user, \
+        response = tokens[username].conn.root.userAskingForHelp(helpId, self.user, \
                 self.hostname, subject, problem) 
+        (answer,why) = response
+        if answer:
+            logger.info(username + "said yes, help is now being given")
+        else:
+            logger.info(username + "said no: " + why)
+
+        return response
 
     def exposed_sendMessage(self, helpId, toUser, message):
         '''
@@ -187,6 +194,8 @@ class UserToken(object):
         '''
 
         tokens[toUser].message(helpId, message)
+
+        logger.info(self.user + "->" + toUser + ":" + message)
 
     def message(self, helpId, message):
         '''
