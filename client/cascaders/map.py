@@ -119,11 +119,13 @@ class Map:
         for host, (x,y) in self.locator.getMap(lab):
             labelText = host.split('.')[0]
 
+            tooltip = None
             if myHost and host == myHost:
                 labelText += '\n<span color="red">You Are Here</span>'
             elif self._shouldHighlightCascader(host, hosts, subjects):
                 cascader = self.cascaders.findCascader(host=host)
                 labelText += '\n<span color="blue" underline="single">Cascader</span>'
+                tooltip = str(cascader[1]) #subjects
 
             x = mx - x
 
@@ -131,6 +133,10 @@ class Map:
             label = gtk.Label()
             label.set_markup(labelText)
             eb.add(label)
+
+            if tooltip is not None:
+                tooltips = gtk.Tooltips()
+                tooltips.set_tip(label, tooltip)
 
             if onClick is not None:
                 eb.connect('button-press-event', onClick, host)
