@@ -94,10 +94,10 @@ class Map:
             return False
 
         username, (host, cascSubjects) = cascader
-        if host not in hosts:
+        if hosts and host not in hosts:
             return False
 
-        if len(set(cascSubjects).intersection(set(subjects))) == 0:
+        if subjects and len(set(cascSubjects).intersection(set(subjects))) == 0:
             return False
 
         return True
