@@ -1,214 +1,214 @@
 [Level 5 North]
-stobbart:1,0
-burrows:2,0
-wideman:3,0
+stobbart.inf.ed.ac.uk:1,0
+burrows.inf.ed.ac.uk:2,0
+wideman.inf.ed.ac.uk:3,0
 
-bechstein:0,1
-luongo:4,1
+bechstein.inf.ed.ac.uk:0,1
+luongo.inf.ed.ac.uk:4,1
 
-rollo:0,2
-salo:4,2
+rollo.inf.ed.ac.uk:0,2
+salo.inf.ed.ac.uk:4,2
 
-boychuck:0,3
-bouillon:4,3
+boychuck.inf.ed.ac.uk:0,3
+bouillon.inf.ed.ac.uk:4,3
 
-hunwick:0,4
-daxter:2,4
-JAK:3,4
+hunwick.inf.ed.ac.uk:0,4
+daxter.inf.ed.ac.uk:2,4
+JAK.inf.ed.ac.uk:3,4
 
-amati:0,5
-bieska:2,5
-bluthner:3,5
+amati.inf.ed.ac.uk:0,5
+bieska.inf.ed.ac.uk:2,5
+bluthner.inf.ed.ac.uk:3,5
 
-allart:0,6
-dancia:4,6
+allart.inf.ed.ac.uk:0,6
+dancia.inf.ed.ac.uk:4,6
 
-chara:4,7
+chara.inf.ed.ac.uk:4,7
 
-demitra:0,7
-drake:4,8
+demitra.inf.ed.ac.uk:0,7
+drake.inf.ed.ac.uk:4,8
 
-krajicek:0,9
-cowan:2,9
-goodwin:3,9
+krajicek.inf.ed.ac.uk:0,9
+cowan.inf.ed.ac.uk:2,9
+goodwin.inf.ed.ac.uk:3,9
 
 
-edler:0,10
-auer:2,10
-legwand:3,10
-marchand:4,10
+edler.inf.ed.ac.uk:0,10
+auer.inf.ed.ac.uk:2,10
+legwand.inf.ed.ac.uk:3,10
+marchand.inf.ed.ac.uk:4,10
 
-fangio:0,11
-karsums:4,11
+fangio.inf.ed.ac.uk:0,11
+karsums.inf.ed.ac.uk:4,11
 
-dury:0,12
+dury.inf.ed.ac.uk:0,12
 
-kesler:0,13
-kobasew:4,13
+kesler.inf.ed.ac.uk:0,13
+kobasew.inf.ed.ac.uk:4,13
 
-beriot:2,14
-nokelainen:3,14
+beriot.inf.ed.ac.uk:2,14
+nokelainen.inf.ed.ac.uk:3,14
 
-lovecchio:4,14
+lovecchio.inf.ed.ac.uk:4,14
 
 
 [Level 5 West]
-cumiskey:0,0
-stashtny:1,0
-salei:2,0
-budaj:3,0
-lilis:4,0
+cumiskey.inf.ed.ac.uk:0,0
+stashtny.inf.ed.ac.uk:1,0
+salei.inf.ed.ac.uk:2,0
+budaj.inf.ed.ac.uk:3,0
+lilis.inf.ed.ac.uk:4,0
 
-holmstrom:0,2
-senna:1,2
-samsonov:2,2
-lidstrom:3,2
-modin:4,2
+holmstrom.inf.ed.ac.uk:0,2
+senna.inf.ed.ac.uk:1,2
+samsonov.inf.ed.ac.uk:2,2
+lidstrom.inf.ed.ac.uk:3,2
+modin.inf.ed.ac.uk:4,2
 
-hamilton:1,4
-eisholt:2,4
-hunt:3,4
-assynt:4,4
+hamilton.inf.ed.ac.uk:1,4
+eisholt.inf.ed.ac.uk:2,4
+hunt.inf.ed.ac.uk:3,4
+assynt.inf.ed.ac.uk:4,4
 
-davidson:0,6
-coulthard:1,6
-hill:2,6
-brabhum:3,6
-manscll:4,6
-ledin:6,6
-svatos:7,6
-kovalev:8,6
-wolski:9,6
-pvospal:10,6
+davidson.inf.ed.ac.uk:0,6
+coulthard.inf.ed.ac.uk:1,6
+hill.inf.ed.ac.uk:2,6
+brabhum.inf.ed.ac.uk:3,6
+manscll.inf.ed.ac.uk:4,6
+ledin.inf.ed.ac.uk:6,6
+svatos.inf.ed.ac.uk:7,6
+kovalev.inf.ed.ac.uk:8,6
+wolski.inf.ed.ac.uk:9,6
+pvospal.inf.ed.ac.uk:10,6
 
-villsie:0,8
-raycroft:1,8
-guite:2,8
-clark:3,8
-mocha:4,8
-buie:6,8
-duich:7,8
-ruthven:8,8
-creran:9,8
-carron:10,8
+villsie.inf.ed.ac.uk:0,8
+raycroft.inf.ed.ac.uk:1,8
+guite.inf.ed.ac.uk:2,8
+clark.inf.ed.ac.uk:3,8
+mocha.inf.ed.ac.uk:4,8
+buie.inf.ed.ac.uk:6,8
+duich.inf.ed.ac.uk:7,8
+ruthven.inf.ed.ac.uk:8,8
+creran.inf.ed.ac.uk:9,8
+carron.inf.ed.ac.uk:10,8
 
-bradford:1,10
-kostitsyn:2,10
-koivu:3,10
-chipchura:4,10
-brittle:6,10
-wharral:7,10
-boisdale:8,10
-bracadale:9,10
+bradford.inf.ed.ac.uk:1,10
+kostitsyn.inf.ed.ac.uk:2,10
+koivu.inf.ed.ac.uk:3,10
+chipchura.inf.ed.ac.uk:4,10
+brittle.inf.ed.ac.uk:6,10
+wharral.inf.ed.ac.uk:7,10
+boisdale.inf.ed.ac.uk:8,10
+bracadale.inf.ed.ac.uk:9,10
 
-ohlund:0,12
-samuelsson:1,12
-aduya:2,12
-plekanec:3,12
-djurgardens:4,12
-scaven:6,12
-sloy:7,12
-alsh:8,12
-woodend:9,12
-modupe:10,12
+ohlund.inf.ed.ac.uk:0,12
+samuelsson.inf.ed.ac.uk:1,12
+aduya.inf.ed.ac.uk:2,12
+plekanec.inf.ed.ac.uk:3,12
+djurgardens.inf.ed.ac.uk:4,12
+scaven.inf.ed.ac.uk:6,12
+sloy.inf.ed.ac.uk:7,12
+alsh.inf.ed.ac.uk:8,12
+woodend.inf.ed.ac.uk:9,12
+modupe.inf.ed.ac.uk:10,12
 
 [Level 4 Lab]
-brundle:5,0
-wurz:6,0
-parise:7,0
-rosbery:8,0
+brundle.inf.ed.ac.uk:5,0
+wurz.inf.ed.ac.uk:6,0
+parise.inf.ed.ac.uk:7,0
+rosbery.inf.ed.ac.uk:8,0
 
-tartini:0,1
-torelli:1,1
-hakkinen:5,1
-heidfeld:6,1
-rikkonen:7,1
-piquet:8,1
+tartini.inf.ed.ac.uk:0,1
+torelli.inf.ed.ac.uk:1,1
+hakkinen.inf.ed.ac.uk:5,1
+heidfeld.inf.ed.ac.uk:6,1
+rikkonen.inf.ed.ac.uk:7,1
+piquet.inf.ed.ac.uk:8,1
 
-tessarini:0,2
-mascitti:1,2
+tessarini.inf.ed.ac.uk:0,2
+mascitti.inf.ed.ac.uk:1,2
 
-blundeli:5,3
-manfredini:6,3
-alfredsson:7,3
-sedin:8,3
+blundeli.inf.ed.ac.uk:5,3
+manfredini.inf.ed.ac.uk:6,3
+alfredsson.inf.ed.ac.uk:7,3
+sedin.inf.ed.ac.uk:8,3
 
-dynamo:5,4
-real:6,4
-maverick:7,4
-rapid:8,4
+dynamo.inf.ed.ac.uk:5,4
+real.inf.ed.ac.uk:6,4
+maverick.inf.ed.ac.uk:7,4
+rapid.inf.ed.ac.uk:8,4
 
-cummertrees:1,5
-dalton:2,5
-canonbie:3,5
-mouswald:4,5
+cummertrees.inf.ed.ac.uk:1,5
+dalton.inf.ed.ac.uk:2,5
+canonbie.inf.ed.ac.uk:3,5
+mouswald.inf.ed.ac.uk:4,5
 
-annan:1,6
-eshakelemuir:2,6
-penpont:3,6
-largs:4,6
+annan.inf.ed.ac.uk:1,6
+eshakelemuir.inf.ed.ac.uk:2,6
+penpont.inf.ed.ac.uk:3,6
+largs.inf.ed.ac.uk:4,6
 
-ruthwell:1,8
-gretna:2,8
-lochmuben:3,8
-holywood:4,8
+ruthwell.inf.ed.ac.uk:1,8
+gretna.inf.ed.ac.uk:2,8
+lochmuben.inf.ed.ac.uk:3,8
+holywood.inf.ed.ac.uk:4,8
 
-langholm:1,9
-tynron:2,9
-carlaverock:3,9
-dryfesdale:4,9
+langholm.inf.ed.ac.uk:1,9
+tynron.inf.ed.ac.uk:2,9
+carlaverock.inf.ed.ac.uk:3,9
+dryfesdale.inf.ed.ac.uk:4,9
 
-DOOR:8,5
+DOOR.inf.ed.ac.uk:8,5
 
 [4.07]
-DOOR:0,0
+DOOR.inf.ed.ac.uk:0,0
 
-weiland:2,1
-dumart:2,2
-siebert:2,3
-komisarek:2,4
+weiland.inf.ed.ac.uk:2,1
+dumart.inf.ed.ac.uk:2,2
+siebert.inf.ed.ac.uk:2,3
+komisarek.inf.ed.ac.uk:2,4
 
-gopher:3,1
-subarc:3,2
-woodchuck:3,3
-mclaren:3,4
+gopher.inf.ed.ac.uk:3,1
+subarc.inf.ed.ac.uk:3,2
+woodchuck.inf.ed.ac.uk:3,3
+mclaren.inf.ed.ac.uk:3,4
 
 [4.14a]
-DOOR:3,3
+DOOR.inf.ed.ac.uk:3,3
 
-ference:0,1
-aberfeldy:1,1
-dalry:2,1
-aurora:3,1
+ference.inf.ed.ac.uk:0,1
+aberfeldy.inf.ed.ac.uk:1,1
+dalry.inf.ed.ac.uk:2,1
+aurora.inf.ed.ac.uk:3,1
 
-balveni:0,2
-aranson:1,2
-winfield:2,2
-auchentoshan:3,2
+balveni.inf.ed.ac.uk:0,2
+aranson.inf.ed.ac.uk:1,2
+winfield.inf.ed.ac.uk:2,2
+auchentoshan.inf.ed.ac.uk:3,2
 
 [Level 5 South]
 
-oich :0,1
-ore:0,2
-mullardock:0,3
-neldricken:0,4
-savard:1,5
-sturn:2,5
-schaefer:3,5
-sobotka:4,5
-thom:5,5
-lochy:5,6
-loyal:5,7
-lubnaig:5,8
-lochmill:4,9
-lochend:3,9
-trieg:2,9
-migdale:1,9
-morton:0,8
-marce:0,7
-morar:0,6
-rannoch:0,3
-quoich:0,2
-yelle:0,1
-wheeler:5,2
-bodnarchuk:4,2
+oich .inf.ed.ac.uk:0,1
+ore.inf.ed.ac.uk:0,2
+mullardock.inf.ed.ac.uk:0,3
+neldricken.inf.ed.ac.uk:0,4
+savard.inf.ed.ac.uk:1,5
+sturn.inf.ed.ac.uk:2,5
+schaefer.inf.ed.ac.uk:3,5
+sobotka.inf.ed.ac.uk:4,5
+thom.inf.ed.ac.uk:5,5
+lochy.inf.ed.ac.uk:5,6
+loyal.inf.ed.ac.uk:5,7
+lubnaig.inf.ed.ac.uk:5,8
+lochmill.inf.ed.ac.uk:4,9
+lochend.inf.ed.ac.uk:3,9
+trieg.inf.ed.ac.uk:2,9
+migdale.inf.ed.ac.uk:1,9
+morton.inf.ed.ac.uk:0,8
+marce.inf.ed.ac.uk:0,7
+morar.inf.ed.ac.uk:0,6
+rannoch.inf.ed.ac.uk:0,3
+quoich.inf.ed.ac.uk:0,2
+yelle.inf.ed.ac.uk:0,1
+wheeler.inf.ed.ac.uk:5,2
+bodnarchuk.inf.ed.ac.uk:4,2

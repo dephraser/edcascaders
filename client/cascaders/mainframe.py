@@ -63,7 +63,7 @@ class Cascaders:
             host, curSubjects = self.cascaders[username]
             self.cascaders[username] = (host, curSubjects + list(subjects))
         except KeyError:
-            warn('Cascader that left didn\'t exist (maybe this user)')
+            warn('Cascader (%s) that added subjects didn\'t exist (maybe this user)' % username)
 
     def removeCascaderSubjects(self, username, subjects):
         debug('Cascader %s removed subjects %s' % (username, subjects))
@@ -75,7 +75,7 @@ class Cascaders:
                 except ValueError:
                     debug('User wasn\'t cascading subject %s' % remSubject)
         except KeyError:
-            warn('Tried to remove subjects from cascader %s, prob not cascading' % username)
+            warn('Tried to remove subjects from cascader %s, prob not cascading or this user' % username)
 
     def findCascaders(self, lab=None, subjects=None, host=None):
         '''
@@ -102,7 +102,7 @@ class Cascaders:
                 error('Username not supported with other args')
                 return None
             try:
-                return self.cascaders[username]
+                return username, self.cascaders[username]
             except KeyError:
                 warn('Couldn\'t find cascader with username: ' % username)
                 return None
@@ -142,7 +142,7 @@ class CascadersFrame:
 
         self.messageDialog = MessageDialog(self.locator, self.cascaders)
 
-        self.hostname = socket.gethostname()
+        self.hostname = socket.gethostname().lower()
 
         #slightly more sane method of setting things up that uses depency
         #tracking
@@ -482,7 +482,10 @@ class CascadersFrame:
             return
         model, itr = tv.get_selection().get_selected()
         cascaderUsername = model.get_value(itr, 0)
-        cascHost, cascSubjects = self.cascaders.findCascader(username=cascaderUsername)
+        self.askForHelp(cascaderUsername)
+
+    def askForHelp(self, casccaderUsername):
+        (_, (cascHost, cascSubjects)) = self.cascaders.findCascader(username=cascaderUsername)
         
         #ask user topic, brief description
         subject = None
@@ -583,11 +586,29 @@ class CascadersFrame:
 
         cbLab = self.builder.get_object('cbFilterLab')
         lab = getComboBoxText(cbLab)
-        self.map.applyFilter(lab, myHost=self.hostname)
+        self.updateMap(lab)
 
     def onFilterSubjectChange(self, evt):
         debug('Filter Subject Changed')
         self.updateCascaderLists()
+
+    def updateMap(self, lab):
+        cbSubjects = self.builder.get_object('cbFilterSubject')
+        filterSub = getComboBoxText(cbSubjects)
+        filterSub = [filterSub] if filterSub != 'All'  else None
+
+        def onHostClick(event, widgit, host):
+            casc = self.cascaders.findCascader(host=host, subjects=filterSub)
+            if casc is None:
+                debug('Clicked on a host (%s) that wasn\'t cascading for the given filter' % host)
+                return
+            (username, _) = casc
+            self.askForHelp(username)
+
+        self.map.applyFilter(lab,
+                             myHost=self.hostname,
+                             subjects=filterSub,
+                             onClick=onHostClick)
 
     #-- -----------------------------------------------------------------------
 

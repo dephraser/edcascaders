@@ -34,10 +34,6 @@ class Locator():
         self.hostsLab = {}
         for lab in self.hosts.sections():
             for hostname, v in self.hosts.items(lab):
-                #it is assumed for now that all hosts are .inf.ed.uk
-                #as this is only running on DICE
-                #TODO bad idea?
-                hostname += '.inf.ed.ac.uk'
                 self.hostsLab[hostname] = lab
                 self.labs[lab].append((hostname, self._parseLocation(v)))
 
@@ -106,7 +102,8 @@ class Map:
 
         return True
 
-    def applyFilter(self, lab, myHost=None, hosts=None, subjects=None):
+    def applyFilter(self, lab, myHost=None, hosts=None, subjects=None,
+                    onClick=None):
         '''
         Redraws the map with the given filters applied, so that only the 
         cascaders that match the parameters are highlighted
@@ -123,13 +120,20 @@ class Map:
             labelText = host.split('.')[0]
 
             if myHost and host == myHost:
-                labelText += '\n<color="red">You Are Here</color>'
+                labelText += '\n<span color="red">You Are Here</span>'
             elif self._shouldHighlightCascader(host, hosts, subjects):
                 cascader = self.cascaders.findCascader(host=host)
-                labelText += '\n<color="blue">Cascading: [%s]</color>' % cascader[1]
+                labelText += '\n<span color="blue" underline="single">Cascader</span>'
 
             x = mx - x
-            l = gtk.Label()
-            l.set_markup(labelText)
-            l.show_all()
-            self.widget.attach(l, x,x+1,y,y+1)
+
+            eb = gtk.EventBox()
+            label = gtk.Label()
+            label.set_markup(labelText)
+            eb.add(label)
+
+            if onClick is not None:
+                eb.connect('button-press-event', onClick, host)
+
+            eb.show_all()
+            self.widget.attach(eb, x,x+1,y,y+1)
