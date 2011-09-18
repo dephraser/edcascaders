@@ -16,7 +16,7 @@ class RequireFunctions:
 
     def add(self, name, function, requirements = []):
         '''
-        Add a function to be run
+        Add a function to be run when its requirements are met
 
         name - name of the thing to be run
         function - function itself

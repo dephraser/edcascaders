@@ -5,15 +5,16 @@ from logging import debug
 
 class AcceptHelpDialog():
     ''' Dialog asking the user if they will accept helping the user '''
-    def __init__(self, username, subject, description):
+    def __init__(self, parentWindow, username, subject, description):
         builder = gtk.Builder()
 
         dr = os.path.dirname(__file__)
         builder.add_from_file(os.path.join(dr, 'gui', 'helpacceptreject.glade'))
 
         self.window = builder.get_object('dgHelpAcceptReject')
+        if parentWindow is not None:
+            self.window.set_transient_for(parentWindow)
         builder.get_object('lbUserInfo').set_label('%s is wanting help on %s' % (username, subject))
-        debug(description)
         builder.get_object('lbDesc').set_label(description)
         builder.connect_signals(self)
 

@@ -1,5 +1,9 @@
+''' Provides classes to allow a program to provide and use a dbus service '''
 import dbus
 import dbus.service
+
+
+method = dbus.service.method
 
 class DbusService(dbus.service.Object):
     ''' Provides an program api to allow other programs to communicate '''

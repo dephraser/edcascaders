@@ -1,3 +1,6 @@
+'''
+File has classes to manage map and location data.
+'''
 from logging import warn
 
 import ConfigParser as configparser
@@ -8,14 +11,22 @@ import gtk
 class Locator():
     '''
     This class is responsbile for providing location information based on hostname
-    as well as being able to provide map data
+    as well as being able to provide map data. Internally this uses configparser
+    to deal with the data which is a list of key, value with the key 
+    being the host and the value being the location
     '''
 
     def _parseLocation(self, location):
+        '''
+        Fairly relaxed configuration parser for the location string
+        '''
         x,y = location.split(',')
         return int(x.strip()),  int(y.strip())
 
     def __init__(self, fileHandle):
+        ''' 
+        fileHandle - a file like object that holds the data
+        '''
         self.hosts = configparser.ConfigParser()
         self.hosts.readfp(fileHandle)
 
@@ -23,6 +34,9 @@ class Locator():
         self.hostsLab = {}
         for lab in self.hosts.sections():
             for hostname, v in self.hosts.items(lab):
+                #it is assumed for now that all hosts are .inf.ed.uk
+                #as this is only running on DICE
+                #TODO bad idea?
                 hostname += '.inf.ed.ac.uk'
                 self.hostsLab[hostname] = lab
                 self.labs[lab].append((hostname, self._parseLocation(v)))
@@ -37,6 +51,7 @@ class Locator():
             return None
 
     def getMap(self, lab):
+        ''' A map is a list of: (host, (xpos, ypos)) '''
         try:
             return self.labs[lab]
         except KeyError:
@@ -47,6 +62,10 @@ class Locator():
         return lab in self.labs
 
     def getMapBounds(self, lab):
+        '''
+        Returns a tuple of the maximum x,y bounds of the map. The minimum
+        is assumed to be 0,0 as (at present) this is how the data is setup
+        '''
         try: 
             mx = max([x for h, (x,y) in self.getMap(lab)])
             my = max([y for h, (x,y) in self.getMap(lab)])
@@ -58,7 +77,8 @@ class Locator():
 
 class Map:
     '''
-    Wrapper around a gtk grid that provides an interface as a map
+    Wrapper around a gtk table that provides an interface as a map with
+    data from the location class
     '''
     def __init__(self, widget, locator, cascaders):
         self.widget = widget
@@ -81,8 +101,7 @@ class Map:
         if host not in hosts:
             return False
 
-        if len(set(cascSubjects) & set(subjects)) == 0:
-            #no intersection
+        if len(set(cascSubjects).intersection(set(subjects))) == 0:
             return False
 
         return True

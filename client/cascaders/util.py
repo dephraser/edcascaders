@@ -27,6 +27,9 @@ def getComboBoxText(cb):
     return model.get_value(itr, 0) if itr is not None else None
 
 def initTreeView(tv):
+    '''
+    creates a dialog box as a list view
+    '''
     column = gtk.TreeViewColumn()
     cell = gtk.CellRendererText()
     column.pack_start(cell)
@@ -35,4 +38,8 @@ def initTreeView(tv):
     tv.set_headers_visible(False)
 
 def generateUnqiueId():
+    '''
+    This should generate a unique id for the user. It doesn't. But it should
+    be good enough for now
+    '''
     return str(time.time())

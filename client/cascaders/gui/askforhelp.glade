@@ -4,11 +4,12 @@
   <!-- interface-naming-policy project-wide -->
   <object class="GtkDialog" id="dgAskForHelp">
     <property name="border_width">5</property>
-    <property name="title" translatable="yes">User asking for help</property>
+    <property name="title" translatable="yes">Ask for help</property>
     <property name="modal">True</property>
     <property name="destroy_with_parent">True</property>
     <property name="type_hint">normal</property>
     <property name="skip_taskbar_hint">True</property>
+    <property name="urgency_hint">True</property>
     <child internal-child="vbox">
       <object class="GtkVBox" id="dialog-vbox1">
         <property name="visible">True</property>

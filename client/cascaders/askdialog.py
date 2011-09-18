@@ -9,9 +9,9 @@ class AskForHelp:
     '''
     Core functionality for the ask for help box, includes validation
     '''
-    def __init__(self, parent, subjects, currentSubject = None):
+    def __init__(self, parentWindow, subjects, currentSubject = None):
         '''
-        subjects - List of all subjects
+        subjects - List of all subjects that the user can select
         currentSubject - The subject that should be selected by default
         '''
         self.builder = gtk.Builder()
@@ -19,6 +19,8 @@ class AskForHelp:
         self.builder.add_from_file(os.path.join(dr, 'gui', 'askforhelp.glade'))
 
         self.window = self.builder.get_object('dgAskForHelp')
+        if parentWindow is not None:
+            self.window.set_transient_for(parentWindow)
         self.builder.connect_signals(self)
 
         self.window.show_all()
@@ -54,9 +56,9 @@ class AskForHelp:
         elif self.getSubject() is None:
             errorDialog('Must have a subject selected')
             return True
-
-        self.ok = True
-        self.window.destroy()
+        else:
+            self.ok = True
+            self.window.destroy()
 
     #--------------------------------------------------------------------------
     # Functions designed for external use

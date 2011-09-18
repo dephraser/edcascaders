@@ -1,9 +1,13 @@
 import rpyc
 
 class FakeAsync:
+    '''
+    Mock class Used to enable the class to be run in async or syncronous mode
+    '''
     def __init__(self, value):
         self.value = value
-
+        self.ready = True
+        self.error = False
 
 class RpcClient:
     '''
@@ -63,11 +67,10 @@ class RpcClient:
         self._callFunction(self.user.removeSubjects, None, subjects)
 
     #--------------------------------------------------------------------------
-
+    # messaging related
     def sendMessage(self, helpid, username, subject, message):
         self._callFunction(self.user.sendMessage, None, helpid, username, message)
 
-    # messaging related
     def askForHelp(self, helpid, username, subject, problem, callback=None):
         res = rpyc.async(self.user.askForHelp)(helpid, username,
                                                subject, problem)

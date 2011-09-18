@@ -9,7 +9,7 @@ class MessageDialog:
     '''
     This dialog window that holds messaging information etc
 
-    When the last tab is closed, this will automatically close
+    When the last tab is closed, this will automatically hide itself
     '''
     def __init__(self, locator, cascaders):
         self.locator = locator
@@ -58,28 +58,32 @@ class MessageDialog:
 
         #this is a bit nasty, but it ensures we aren't reusing an object
         b = gtk.Builder()
-        b.add_from_file('gui/messaging.glade')
+        dr = os.path.dirname(__file__)
+        b.add_from_file(os.path.join(dr, 'gui', 'messaging.glade'))
         widget = b.get_object('frMessageFrame')
         self.messageBuffers[helpid] = b.get_object('tbMessages')
         widget.unparent()
         widget.show_all()
+
+        btn.connect('clicked', self.onTabCloseClicked, widget)
         
         self.notebook.insert_page(widget, hbox)
         
+        #send button
         textbuff = b.get_object('tbCurrentInput')
         send = b.get_object('btSend')
         send.connect('clicked', self.onSendClicked, textbuff, helpid)
 
-        mapBtn = b.get_object('btMap')
 
+        #if we can display a map, do so. This allows easier meetups
+        mapBtn = b.get_object('btMap')
         myLab = self.locator.labFromHostname(myHost) 
         if myLab is None or myLab != self.locator.labFromHostname(cascHost):
             mapBtn.set_sensitive(False)
         else:
             mapBtn.connect('clicked', self.onMapPressed, myHost, cascHost)
 
-        btn.connect('clicked', self.onTabCloseClicked, widget)
-
+        #remap some key events
         i = b.get_object('txCurrentInput')
         i.connect('key-press-event', self.onKeyPress, textbuff, helpid)
 

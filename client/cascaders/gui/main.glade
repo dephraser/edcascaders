@@ -243,12 +243,29 @@
                       </packing>
                     </child>
                     <child>
-                      <object class="GtkTreeView" id="tvCascList">
+                      <object class="GtkScrolledWindow" id="scrolledwindow3">
                         <property name="width_request">150</property>
                         <property name="visible">True</property>
                         <property name="can_focus">True</property>
-                        <property name="model">lsCascList</property>
-                        <signal name="button_press_event" handler="onCascaderClick"/>
+                        <property name="hscrollbar_policy">automatic</property>
+                        <property name="vscrollbar_policy">automatic</property>
+                        <child>
+                          <object class="GtkViewport" id="viewport3">
+                            <property name="visible">True</property>
+                            <property name="resize_mode">queue</property>
+                            <property name="shadow_type">none</property>
+                            <child>
+                              <object class="GtkTreeView" id="tvCascList">
+                                <property name="width_request">150</property>
+                                <property name="visible">True</property>
+                                <property name="can_focus">True</property>
+                                <property name="model">lsCascList</property>
+                                <property name="search_column">0</property>
+                                <signal name="button_press_event" handler="onCascaderClick"/>
+                              </object>
+                            </child>
+                          </object>
+                        </child>
                       </object>
                       <packing>
                         <property name="expand">False</property>
@@ -348,10 +365,26 @@
                   </packing>
                 </child>
                 <child>
-                  <object class="GtkTreeView" id="tvCascSubjects">
+                  <object class="GtkScrolledWindow" id="scrolledwindow2">
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
-                    <property name="model">lsCascSubjects</property>
+                    <property name="hscrollbar_policy">automatic</property>
+                    <property name="vscrollbar_policy">automatic</property>
+                    <child>
+                      <object class="GtkViewport" id="viewport2">
+                        <property name="visible">True</property>
+                        <property name="resize_mode">queue</property>
+                        <property name="shadow_type">none</property>
+                        <child>
+                          <object class="GtkTreeView" id="tvCascSubjects">
+                            <property name="visible">True</property>
+                            <property name="can_focus">True</property>
+                            <property name="model">lsCascSubjects</property>
+                            <property name="search_column">0</property>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
                   </object>
                   <packing>
                     <property name="position">2</property>

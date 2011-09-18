@@ -32,13 +32,14 @@ import util
 from util import getComboBoxText, initTreeView, errorDialog
 
 class Cascaders:
-    ''' Manages the cascaders and provides helpful functions '''
+    ''' Manages a list of cascaders and provides helpful functions '''
 
     def __init__(self, locator, username):
         '''
+        locator is a object that implements labFromHostname.
+
         username is the current users username. This is excluded from
-        results
-        locator is a object that implements labFromHostname
+        results so that you are never displayed as a cascader
         '''
         self.locator = locator
         self.username = username
@@ -110,7 +111,12 @@ class Cascaders:
             return self.findCascaders(**kwargs).next()
         except StopIteration:
             return None
-
+ 
+#-------------------------------------------------------------------------------
+#constants
+PORT = 5010
+HOST = 'localhost'
+#-------------------------------------------------------------------------------
 
 class CascadersFrame:
     def __init__(self, debugEnabled=False, show=True):
@@ -138,7 +144,8 @@ class CascadersFrame:
 
         self.hostname = socket.gethostname()
 
-        #slightly more sane method of setting things up
+        #slightly more sane method of setting things up that uses depency
+        #tracking
         req = RequireFunctions()
         req.add('gui', self.initGui)
         req.add('tray', self.initTray, ['gui'])
@@ -177,6 +184,7 @@ class CascadersFrame:
         self.window.connect('delete-event', lambda w, e: w.hide() or True)
 
     def initSignals(self):
+        ''' Signals catch events and shut things down properly '''
         signal.signal(signal.SIGINT, self.quit)
         signal.signal(signal.SIGTERM, self.quit)
 
@@ -194,12 +202,7 @@ class CascadersFrame:
         self.builder.connect_signals(self)
 
     def initLabs(self):
-        '''
-        Sets up the labs drop down box stuff
-        '''
-        if not hasattr(self, 'locator'):
-            raise AttributeError('initLabs depends on self.locator')
-
+        ''' Sets up the labs drop down box stuff '''
         lst = gtk.ListStore(gobject.TYPE_STRING)
         lst.append(['All'])
         for lab in self.locator.getLabs():
@@ -219,8 +222,7 @@ class CascadersFrame:
         self.addSubjects(self.settings['cascSubjects'])
 
         if self.settings['cascading'] and self.settings['autocascade']:
-            #start cascading
-            self.onStartStopCascading(None)
+            self.startCascading()
 
     def _getUsername(self):
         try:
@@ -234,7 +236,7 @@ class CascadersFrame:
             errorDialog(('Couldn\'t get LOGNAME from the enviroment,'
                          ' this only runs on Linux at the moment'))
             #can't destroy the window as it leads to an exception
-            sys.exit(1) 
+            self.quit()
         return logname
 
     def initService(self):
@@ -252,8 +254,12 @@ class CascadersFrame:
         s.registerUserAskingForHelp(self.onUserAskingForHelp)
 
     def initConnection(self):
-        ''' called in the constructor. also does the setup post connect '''
+        '''
+        called in the constructor. also does the setup post connect
 
+        this uses sys.exist rather than self.quit as self.quit relies
+        on settings being loaded
+        '''
         debug('Connecting...')
         status = self.builder.get_object('lbStatus')
         status.set('Connecting...')
@@ -261,11 +267,15 @@ class CascadersFrame:
         self.builder.get_object('lbUsername').set(self.username)
 
         try:
-            self.client = client.RpcClient(lambda b:self.service,
-                                           'localhost',
-                                           5010,
-                                           self.username,
-                                           self.hostname)
+            try:
+                self.client = client.RpcClient(lambda b:self.service,
+                                               HOST,
+                                               PORT,
+                                               self.username,
+                                               self.hostname)
+            except ValueError as e:
+                errorDialog('Couldn\'t log in, server reported %s: ' % e.value)
+                sys.exit(1)
 
             if self.debugEnabled == True:
                 self.client.setAsync(False)
@@ -290,7 +300,7 @@ class CascadersFrame:
 
     #--------------------------------------------------------------------------
 
-    def bgServer(self, source = None, cond = None):
+    def bgServer(self, source=None, cond=None):
         '''
         This function is called when there is data to be read in the pipe
 
@@ -300,14 +310,16 @@ class CascadersFrame:
             self.client.conn.poll_all()
             return True
         else:
+            debug('Conn died I assume')
             return False
     #--------------------------------------------------------------------------
-    # Service callback functions
+    # Service callback functions, most of these are just simple wrappers
+    # around the cascaders class.
 
     def onUserAskingForHelp(self,  helpid, username, host, subject, description):
         debug('Help wanted by: %s' % username)
 
-        dialog = AcceptHelpDialog(username, subject, description)
+        dialog = AcceptHelpDialog(self.window, username, subject, description)
 
         #check if user can give help
         if dialog.isAccept():
@@ -353,10 +365,6 @@ class CascadersFrame:
         self.updateCascaderLists()
 
     #--------------------------------------------------------------------------
-    def updateMap(self, lab):
-        ''' Rebuilds the map '''
-        self.map.applyFilter(lab, myHost=self.hostname)
-
     def updateAllSubjects(self):
         '''
         Calling this ensures that the gui reflects the current list of subjects
@@ -365,8 +373,7 @@ class CascadersFrame:
 
         cascCb = self.builder.get_object('cbCascSubjectList')
         lst = gtk.ListStore(gobject.TYPE_STRING)
-        for s in self.subjects:
-            lst.append([s])
+        [lst.append([subject]) for subject in self.subjects]
         cascCb.set_model(lst)
         cell = gtk.CellRendererText()
         cascCb.set_active(0)
@@ -376,8 +383,7 @@ class CascadersFrame:
         cb = self.builder.get_object('cbFilterSubject')
         lst = gtk.ListStore(gobject.TYPE_STRING)
         lst.append(['All'])
-        for s in self.subjects:
-            lst.append([s])
+        [lst.append([subject]) for subject in self.subjects]
         cb.set_model(lst)
         cell = gtk.CellRendererText()
         cb.set_active(0)
@@ -402,13 +408,16 @@ class CascadersFrame:
         filterLab = getComboBoxText(cbLab)
         filterLab = filterLab if filterLab != 'All' else None
 
-        cascaders = self.cascaders.findCascaders(lab=filterLab, subjects=filterSub)
-        for username, (hostname, subjects) in cascaders:
-            ls.append([username])
+        cascaders = self.cascaders.findCascaders(lab=filterLab,
+                                                 subjects=filterSub)
+        [ls.append([username]) for username, _ in cascaders]
 
     #--------------------------------------------------------------------------
     # GUI events
     def quit(self, *a):
+        '''
+        This quits the application, doing the required shutdown stuff
+        '''
         debug('Starting shutdown')
         self.settings['cascSubjects'] = list(self.cascadeSubjects)
         self.settings['cascading'] = self.cascading
@@ -417,42 +426,56 @@ class CascadersFrame:
 
         #quit the gui to try and make everything look snappy (so we don't lock
         #when messing around doing IO
+        #destorying window required, else gtk won't close if we have dialog up
+        self.window.destroy() 
         gtk.main_quit()
+
         settings.saveSettings(self.settings)
         debug('Finished shutdown, goodbye')
 
     def onStartStopCascading(self, event):
+        ''' Toggles cascading '''
         btn = self.builder.get_object('btStartStopCasc')
         btn.set_sensitive(False)
         if self.cascading:
             debug('Stopping Cascading')
-            self.cascading = False
-            self.client.stopCascading(lambda *a: btn.set_sensitive(True))
-            btn.set_label('Start Cascading')
+            self.stopCascading()
         else:
             debug('Starting Cascading')
-            if len(self.cascadeSubjects) == 0:
-                errorDialog('You cannot start cascading when you no subjects')
-                btn.set_sensitive(True)
-            else:
-                #we offer the user to automatically start cascading
-                if self.settings['asked_autocascade'] == False and self.settings['autocascade'] == False:
-                    self.settings['asked_autocascade'] = True
+            self.startCascading()
 
-                    message = gtk.MessageDialog(None,
-                                                gtk.DIALOG_MODAL,
-                                                gtk.MESSAGE_INFO,
-                                                gtk.BUTTONS_YES_NO,
-                                                "Do you want to enable auto cascading")
-                    resp = message.run()
-                    if resp == gtk.RESPONSE_YES:
-                        self.builder.get_object('cbAutocascade').set_active(True)
-                    message.destroy()
+    def stopCascading(self):
+        btn = self.builder.get_object('btStartStopCasc')
+        self.cascading = False
+        self.client.stopCascading(lambda *a: btn.set_sensitive(True))
+        btn.set_label('Start Cascading')
+
+    def startCascading(self):
+        btn = self.builder.get_object('btStartStopCasc')
+        if len(self.cascadeSubjects) == 0:
+            errorDialog('You cannot start cascading when you no subjects')
+            btn.set_sensitive(True)
+        else:
+            #we offer the user to automatically start cascading
+            askedAutoCascading = self.settings['asked_autocascade']
+            autoCascade = self.settings['autocascade'] == False
+            if askedAutoCascading == False and autoCascade:
+                self.settings['asked_autocascade'] = True
+
+                message = gtk.MessageDialog(None,
+                                            gtk.DIALOG_MODAL,
+                                            gtk.MESSAGE_INFO,
+                                            gtk.BUTTONS_YES_NO,
+                                            "Do you want to enable auto cascading")
+                resp = message.run()
+                if resp == gtk.RESPONSE_YES:
+                    self.builder.get_object('cbAutocascade').set_active(True)
+                message.destroy()
 
 
-                self.cascading = True
-                self.client.startCascading(lambda *a: btn.set_sensitive(True))
-                btn.set_label('Stop Cascading')
+            self.cascading = True
+            self.client.startCascading(lambda *a: btn.set_sensitive(True))
+            btn.set_label('Stop Cascading')
 
     def onCascaderClick(self, tv, event):
         if event.button != 1 or event.type != gtk.gdk._2BUTTON_PRESS:
@@ -465,7 +488,7 @@ class CascadersFrame:
         subject = None
         if getComboBoxText(self.builder.get_object('cbFilterSubject')) != 'All':
             subject = getComboBoxText(self.builder.get_object('cbFilterSubject'))
-        helpDialog = AskForHelp(self, cascSubjects, subject)
+        helpDialog = AskForHelp(self.window, cascSubjects, subject)
 
         if helpDialog.isOk():
             debug('Dialog is ok, asking for help')
@@ -487,6 +510,7 @@ class CascadersFrame:
             self.messageDialog.window.show_all()
 
             def onResponse(result):
+                ''' Response from asking for help '''
                 accepted, message = result.value
                 wf = self.messageDialog.writeMessage
                 if accepted:
@@ -514,9 +538,9 @@ class CascadersFrame:
                 debug('Adding subject: %s' % subject)
 
                 ls.append([subject])
-                self.client.addSubjects([subject])
                 self.cascadeSubjects.add(subject)
 
+        self.client.addSubjects(subjects)
         debug('Subjects now: %s' % self.cascadeSubjects)
 
     
@@ -535,7 +559,7 @@ class CascadersFrame:
 
         if len(self.cascadeSubjects) == 0 and self.cascading:
             debug('No more subjects and we are cascading')
-            self.onStartStopCascading(None)
+            self.stopCascading()
 
 
     # Filter Stuff
@@ -559,7 +583,7 @@ class CascadersFrame:
 
         cbLab = self.builder.get_object('cbFilterLab')
         lab = getComboBoxText(cbLab)
-        self.updateMap(lab)
+        self.map.applyFilter(lab, myHost=self.hostname)
 
     def onFilterSubjectChange(self, evt):
         debug('Filter Subject Changed')

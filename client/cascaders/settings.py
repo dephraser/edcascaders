@@ -3,6 +3,7 @@ Functions for dealing with settings files, the settings file is basically an
 dict and this provides the functions for dealing with that dict
 '''
 import os
+import shutil
 import json
 from logging import warn, debug
 
@@ -11,14 +12,15 @@ defaultSettings = {
         'autostart' : False,        #program autostart
         'cascSubjects' : [],        #list of cascading subjects
         'cascading' : False,        #is the user cascading
-        'autocascade' : True,       #start cascading on program start?
+        'autocascade' : False,      #start cascading on program start?
         'asked_autocascade' : False,#asked if we should autocascade
         'asked_autostart' : False,  #asked if we should autostart
 }
 
 def getSettingsDirectory():
     ''' Gets the settings directory, will autocreate if it doesn't exist'''
-    dr = os.path.expanduser(os.path.join('.config', 'cascaders'))
+    home = os.path.expanduser('~')
+    dr = os.path.join(home, '.config', 'cascaders')
     if not os.path.exists(dr):
         debug('creating directoires for config')
         os.makedirs(dr)
@@ -50,19 +52,27 @@ def loadSettings():
         return defaultSettings
 
 def saveSettings(settings):
+    _fixAutostartGnome(settings)
     with open(getSettingsFile(), 'wb') as f:
         return f.write(json.dumps(settings))
 
-    _fixAutostartGnome(settings)
-
 
 def _fixAutostartGnome(settings):
-    ''' This sorts autostart so that it should work on gnome '''
-    path = os.path.expanduser(os.path.join('.config', 'autostart', 'cascaders'))
+    '''
+    This sorts autostart so that it should work on gnome, depenant on 
+    the settings.
+    '''
+    home = os.path.expanduser('~')
+    path = os.path.join(home, '.config', 'autostart', 'cascaders.desktop')
     if settings['autostart'] == False:
         if os.path.exists(path):
             os.remove(path)
     else:
         if not os.path.exists(path):
-            fromPath = os.path.join(os.path.dirname(__file__), 'data', 'cascaders.desktop')
+            if not os.path.exists(os.path.dirname(path)):
+                os.makedirs(path)
+            debug('Moving autostart file to %s' % path)
+            fromPath = os.path.join(os.path.dirname(__file__),
+                                    'data',
+                                    'cascaders.desktop')
             shutil.copy(fromPath, path)
