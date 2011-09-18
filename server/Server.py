@@ -208,7 +208,9 @@ class ChatService(Service):
             self.token.exposed_logout()
     
     def exposed_userJoin(self, username, hostname):
-        if self.token and not self.token.stale:
+        if username in tokens:
+            raise ValueError("Username in use")
+        elif self.token and not self.token.stale:
             raise ValueError("already logged in")
         else:
             self.token = UserToken(self._conn, username, hostname)
