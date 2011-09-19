@@ -83,11 +83,16 @@ class Cascaders:
 
     def findCascaders(self, lab=None, subjects=None, host=None):
         '''
-        Find all cascaders that match the given patterns
+        Find all cascaders that match the given patterns, although
+        this will not return any cascaders that are not cascading in 
+        any subjects
 
         TODO really slow, not sure it matters
         '''
         for user, (cascHost, cascSubjects) in self.cascaders.iteritems():
+            if len(cascSubjects) == 0:
+                continue
+
             if host and host != cascHost:
                 continue
 
@@ -107,7 +112,10 @@ class Cascaders:
                 error('Username not supported with other args')
                 return None
             try:
-                return username, self.cascaders[username]
+                host, subjects = self.cascaders[username]
+                if len(subjects) == 0:
+                    return None
+                return username, (host, subjects)
             except KeyError:
                 warn('Couldn\'t find cascader with username: ' % username)
                 return None
