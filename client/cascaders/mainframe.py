@@ -28,6 +28,8 @@ from accepthelp import AcceptHelpDialog
 from askdialog import AskForHelp
 from messagedialog import MessageDialog
 
+from trayicon import TrayIcon
+
 import util
 from util import getComboBoxText, initTreeView, errorDialog
 
@@ -189,9 +191,7 @@ class CascadersFrame:
         icon = os.path.join(os.path.dirname(__file__),
                             'icons',
                             'cascade32.png')
-        self.trayIcon = gtk.status_icon_new_from_file(icon)
-        self.trayIcon.connect('activate', lambda *a: self.window.show_all())
-        self.trayIcon.connect('popup-menu', self.onTrayMenu)
+        self.trayIcon = TrayIcon(self, icon)
         self.window.connect('delete-event', lambda w, e: w.hide() or True)
 
     def initSignals(self):
@@ -634,23 +634,3 @@ class CascadersFrame:
                              myHost=self.hostname,
                              subjects=filterSub,
                              onClick=onHostClick)
-
-    #-- -----------------------------------------------------------------------
-
-    def onTrayMenu(self, icon, btn, time):
-        '''
-        Menu popup for the tray icon
-        '''
-        menu = gtk.Menu()
-
-        quitItem = gtk.MenuItem()
-        quitItem.set_label('Quit')
-        quitItem.connect('activate', self.quit)
-        menu.append(quitItem)
-
-        menu.show_all()
-        menu.popup(None,
-                   None,
-                   gtk.status_icon_position_menu,
-                   btn,
-                   time, self.trayIcon)
