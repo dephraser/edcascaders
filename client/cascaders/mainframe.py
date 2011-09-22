@@ -6,17 +6,16 @@ It doesn't handle any functionality outside the frame such as messaging
 '''
 from logging import error, warn, debug
 import os
-import sys
 import socket
 import signal
 
 import gtk
-import gtk.glade
 import gobject
 
+from twisted.internet import reactor
+
 #rpc
-import client
-import service
+import client, service
 
 import labmap
 import settings
@@ -32,6 +31,7 @@ from trayicon import TrayIcon
 
 import util
 from util import getComboBoxText, initTreeView, errorDialog
+
 
 class Cascaders:
     ''' Manages a list of cascaders and provides helpful functions '''
@@ -257,7 +257,6 @@ class CascadersFrame:
         except KeyError:
             errorDialog(('Couldn\'t get LOGNAME from the enviroment,'
                          ' this only runs on Linux at the moment'))
-            #can't destroy the window as it leads to an exception
             self.quit()
         return logname
 
@@ -278,9 +277,6 @@ class CascadersFrame:
     def initConnection(self):
         '''
         called in the constructor. also does the setup post connect
-
-        this uses sys.exist rather than self.quit as self.quit relies
-        on settings being loaded
         '''
         debug('Connecting...')
         status = self.builder.get_object('lbStatus')
@@ -288,52 +284,37 @@ class CascadersFrame:
 
         self.builder.get_object('lbUsername').set(self.username)
 
-        try:
-            try:
-                self.client = client.RpcClient(lambda b:self.service,
-                                               HOST,
-                                               PORT,
-                                               self.username,
-                                               self.hostname)
-            except ValueError as e:
-                errorDialog('Couldn\'t log in, server reported %s: ' % e.value)
-                sys.exit(1)
+        self.client = client.RpcClient(lambda b:self.service,
+                                       HOST,
+                                       PORT,
+                                       self.username,
+                                       self.hostname)
 
-            if self.debugEnabled == True:
-                self.client.setAsync(False)
+        def subject(result):
+            self.subjects = [x for x in result.value]
+            self.updateAllSubjects()
 
-            def subject(result):
-                self.subjects = [x for x in result.value]
-                self.updateAllSubjects()
+        def casc(result):
+            for usr, host, sub in result.value:
+                self.cascaders.addCascader(usr, host, sub)
+            self.updateCascaderLists()
 
-            def casc(result):
-                for usr, host, sub in result.value:
-                    self.cascaders.addCascader(usr, host, sub)
-                self.updateCascaderLists()
+        self.client.getSubjectList(subject)
+        self.client.getCascaderList(casc)
 
-            self.client.getSubjectList(subject)
-            self.client.getCascaderList(casc)
-        except socket.error:
-            errorDialog('Failed to connect to server')
-            sys.exit(1)
+        self.client.registerLoginCallback(lambda: status.set('Connected'))
 
-        gobject.io_add_watch(self.client.conn, gobject.IO_IN, self.bgServer)
-        status.set('Connected')
+        def loginErr():
+            errorDialog('Failed to login')
+            self.quit()
 
-    #--------------------------------------------------------------------------
+        def connectErr():
+            errorDialog('Failed to connect to the server')
+            self.quit()
 
-    def bgServer(self, source=None, cond=None):
-        '''
-        This function is called when there is data to be read in the pipe
+        self.client.registerLoginErrCallback(loginErr)
+        self.client.registerConnectErrCallback(connectErr)
 
-        (It is setup in initConnection)
-        '''
-        if self.client.conn:
-            self.client.conn.poll_all()
-            return True
-        else:
-            debug('Conn died I assume')
-            return False
     #--------------------------------------------------------------------------
     # Service callback functions, most of these are just simple wrappers
     # around the cascaders class.
@@ -441,21 +422,29 @@ class CascadersFrame:
     # GUI events
     def quit(self, *a):
         '''
-        This quits the application, doing the required shutdown stuff
+        This quits the application, doing the required shutdown stuff. If some
+        thing goes in here, try to assume nothing about the state of the
+        application.
         '''
         debug('Starting shutdown')
-        self.settings['cascSubjects'] = list(self.cascadeSubjects)
-        self.settings['cascading'] = self.cascading
-        self.settings['autostart'] = self.builder.get_object('cbAutostart').get_active()
-        self.settings['autocascade'] = self.builder.get_object('cbAutocascade').get_active()
+
+        if self.settings:
+            self.settings['cascSubjects'] = list(self.cascadeSubjects)
+            self.settings['cascading'] = self.cascading
+            self.settings['autostart'] = self.builder.get_object('cbAutostart').get_active()
+            self.settings['autocascade'] = self.builder.get_object('cbAutocascade').get_active()
 
         #quit the gui to try and make everything look snappy (so we don't lock
         #when messing around doing IO
         #destorying window required, else gtk won't close if we have dialog up
-        self.window.destroy() 
-        gtk.main_quit()
+        if self.window:
+            self.window.destroy() 
 
-        settings.saveSettings(self.settings)
+        reactor.stop()
+
+        if self.settings:
+            settings.saveSettings(self.settings)
+
         debug('Finished shutdown, goodbye')
 
     def onStartStopCascading(self, event):

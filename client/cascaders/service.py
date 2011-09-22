@@ -2,7 +2,7 @@
 
 from logging import warn
 
-from twisted import pb
+from twisted.spread import pb
 
 class RpcService(pb.Referenceable):
     '''
@@ -13,8 +13,6 @@ class RpcService(pb.Referenceable):
     for simplicity you can only have one callback registered
     '''
     def __init__(self, *args, **kwargs):
-        super(RpcService, self).__init__(*args, **kwargs)
-
         self.messageFunctions = {}
         self.userAskingForHelp = None
 

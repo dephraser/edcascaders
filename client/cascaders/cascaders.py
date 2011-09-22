@@ -8,10 +8,16 @@ import logging
 from optparse import OptionParser
 import dbus.mainloop.glib
 
-import gtk
+from twisted.internet import gtk2reactor
+gtk2reactor.install()
+
+from twisted.internet import reactor
 
 import mainframe
 import dbusutil
+
+
+
 
 
 class RaiseableService(dbusutil.DbusService):
@@ -56,4 +62,5 @@ if __name__ == '__main__':
                                        show=showWindow,
                                        host=options.host)
         obj = RaiseableService(interface, path, win)
-        gtk.main()
+        reactor.run()
+
