@@ -1,13 +1,5 @@
-import rpyc
-
-class FakeAsync:
-    '''
-    Mock class Used to enable the class to be run in async or syncronous mode
-    '''
-    def __init__(self, value):
-        self.value = value
-        self.ready = True
-        self.error = False
+from twisted.spread import pb
+from twisted.internet import reactor
 
 class RpcClient:
     '''
@@ -18,63 +10,62 @@ class RpcClient:
     errors et al
     '''
     def __init__(self, service, host, port, username, computerHostname):
-        #Nb: does raise exceptions when cannot connect, 
-        self.conn = rpyc.connect(host, port, service = service)
+        self.factory = pb.PBClientFactory()
+        reactor.connectTCP(host, port, self.factor)
+        
+        self.root = None
 
-        try:
-            self.user = self.conn.root.userJoin(username,
-                                                computerHostname)
-        except ValueError:
-            self.conn.close()
-            self.conn = None
-            raise
+        #may take some time to connect, this handles the callback when connected
+        deferred = factory.getRootObject()
 
-        self.async = True
+        deferred.addCallback(self._onGetRoobObj,
+                             service,
+                             username,
+                             computerHostname)
 
-    def setAsync(self, enabled=True):
-        self.async = enabled
+    def _onGetRootObj(self, obj, service, username, computerHostname):
+        self.root = obj
+        d = self.root.callRemote('userJoin',
+                                 service,
+                                 username,
+                                 computerHostname)
+        d.addCallback(self._onLogin)
+
+    def _onLogin(self):
+        pass
 
     def _callFunction(self, function, callback, *args, **kwargs):
-        if self.async:
-            res = rpyc.async(function)(*args, **kwargs)
-            if callback is not None:
-                res.add_callback(callback)
-        else:
-            result = FakeAsync(function(*args, **kwargs))
-            if callback is not None:
-                callback(result)
+        d = self.root.callRemote(function, *args, **kwargs)
+        if callback is not None:
+            d.addCallback(callback)
 
     #--------------------------------------------------------------------------
     # simple functions used on startup
     def getCascaderList(self, callback):
-        self._callFunction(self.user.getCascaderList, callback)
+        self._callFunction('getCascaderList', callback)
 
     def getSubjectList(self, callback):
-        self._callFunction(self.user.getSubjectList, callback)
+        self._callFunction('getSubjectList', callback)
 
     #--------------------------------------------------------------------------
     # cascading related 
     def startCascading(self, callback=None):
-        self._callFunction(self.user.startCascading, callback)
+        self._callFunction('startCascading', callback)
 
     def stopCascading(self, callback=None):
-        self._callFunction(self.user.stopCascading, callback)
+        self._callFunction('stopCascading', callback)
 
     def addSubjects(self, subjects):
-        self._callFunction(self.user.addSubjects, None, subjects)
+        self._callFunction('addSubjects', None, subjects)
 
     def removeSubjects(self, subjects):
-        self._callFunction(self.user.removeSubjects, None, subjects)
+        self._callFunction('removeSubjects', None, subjects)
 
     #--------------------------------------------------------------------------
     # messaging related
     def sendMessage(self, helpid, username, subject, message):
-        self._callFunction(self.user.sendMessage, None, helpid, username, message)
+        self._callFunction('sendMessage', None, helpid, username, message)
 
     def askForHelp(self, helpid, username, subject, problem, callback=None):
-        res = rpyc.async(self.user.askForHelp)(helpid, username,
-                                               subject, problem)
-        if callback is not None:
-            #the result from this is an async result, so we need to add another
-            #callback
-            res.add_callback(lambda result: result.add_callback(callback))
+        self._callFunction('askForHelp', callback,
+                           helpid, username, subject, problem)

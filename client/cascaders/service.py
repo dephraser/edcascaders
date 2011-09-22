@@ -1,8 +1,10 @@
-import rpyc
+
 
 from logging import warn
 
-class RpcService(rpyc.Service):
+from twisted import pb
+
+class RpcService(pb.Referenceable):
     '''
     This provides the service for data sent from the server to the client
 
@@ -10,11 +12,9 @@ class RpcService(rpyc.Service):
     for a user of the class to get the results of functions. In most cases
     for simplicity you can only have one callback registered
     '''
-    def __init__(self):
-        #TODO this needs fixing so it can actually pass the connection in
-        #but it is a PITA to fix as the class really should be created by
-        #the rpyc connection so we run into an issue with setting up callbacks
-        super(RpcService, self).__init__(None)
+    def __init__(self, *args, **kwargs):
+        super(RpcService, self).__init__(*args, **kwargs)
+
         self.messageFunctions = {}
         self.userAskingForHelp = None
 
