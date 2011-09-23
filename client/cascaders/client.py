@@ -135,3 +135,6 @@ class RpcClient:
 
         self._callFunction('askForHelp', fullCallback,
                            helpid, username, subject, problem)
+    #--------------------------------------------------------------------------
+    def logout(self, callback=None):
+        self._callFunction('logout', callback)

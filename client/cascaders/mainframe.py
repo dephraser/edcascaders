@@ -6,6 +6,7 @@ It doesn't handle any functionality outside the frame such as messaging
 '''
 from logging import error, warn, debug
 import os
+import sys
 import socket
 import signal
 
@@ -437,17 +438,33 @@ class CascadersFrame:
             self.settings['autocascade'] = self.builder.get_object('cbAutocascade').get_active()
 
         #quit the gui to try and make everything look snappy (so we don't lock
-        #when messing around doing IO
-        #destorying window required, else gtk won't close if we have dialog up
+        #when messing around doing IO. we can't use destory else other 
+        #things don't work
         if self.window:
-            self.window.destroy() 
+            self.window.hide_all() 
 
+        if self.client is not None:
+            debug('Logging out')
+            self.client.logout(self._finishQuit)
+        else:
+            debug('No client, going to second stage shutdown directly')
+            self._finishQuit()
+
+    def _finishQuit(self, result):
+        debug('In second stage shutdown')
+        if self.window:
+            self.window.destroy()
+
+        #seems to be a bug, but we need to clean up the threadpool
+        if reactor.threadpool is not None:
+            reactor.threadpool.stop()
         reactor.stop()
 
         if self.settings:
             settings.saveSettings(self.settings)
 
         debug('Finished shutdown, goodbye')
+        return False #we must return false here due to using timeout_add
 
     def onStartStopCascading(self, event):
         ''' Toggles cascading '''
