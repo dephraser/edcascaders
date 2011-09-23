@@ -14,6 +14,7 @@ import gtk
 import gobject
 
 from twisted.internet import reactor
+import twisted.internet.error
 
 #rpc
 import client, service
@@ -301,18 +302,20 @@ class CascadersFrame:
             self.updateCascaderLists()
 
         #nb: these functions are not called until login
-        self.client.getSubjectList(subject)
-        self.client.getCascaderList(casc)
-        self.client.registerLoginCallback(lambda: status.set('Connected'))
+        self.client.getSubjectList().addCallback(subject)
+        self.client.getCascaderList().addCallback(casc)
+        self.client.registerLoginCallback(lambda *a: status.set('Connected'))
 
         #error "handling"
-        #TODO give better messages
-        def loginErr():
-            errorDialog('Failed to login')
+        def loginErr(reason):
+            reason = reason.trap(ValueError)
+            errorDialog('Failed to login, server reported %s' % reason.getErrorMessage())
             self.quit()
 
-        def connectErr():
-            errorDialog('Failed to connect to the server')
+        def connectErr(reason):
+            reason.trap(twisted.internet.error.ConnectionRefusedError)
+            errorDialog('Failed to connect to the '
+                        'server, the connection was refused')
             self.quit()
 
         self.client.registerLoginErrCallback(loginErr)
@@ -445,12 +448,27 @@ class CascadersFrame:
 
         if self.client is not None:
             debug('Logging out')
-            self.client.logout(self._finishQuit)
+            try:
+                gobject.timeout_add(5000, self._finishQuitTimeout)
+                l = self.client.logout()
+                l.addCallback(self._finishQuit)
+                l.addErrCallback(self._finishQuitErr)
+            except Exception:
+                self._finishQuit()
         else:
             debug('No client, going to second stage shutdown directly')
             self._finishQuit()
 
-    def _finishQuit(self, result):
+    def _finishQuitTimeout(self):
+        debug('Logging out timed out')
+        self._finishQuit()
+        return False #we should return false here due to using timeout_add
+
+    def _finishQuitErr(self, reason):
+        debug('There was an error logging out %s' % str(reason))
+        self._finishQuit()
+
+    def _finishQuit(self, result=None):
         debug('In second stage shutdown')
         if self.window:
             self.window.destroy()
@@ -458,13 +476,15 @@ class CascadersFrame:
         #seems to be a bug, but we need to clean up the threadpool
         if reactor.threadpool is not None:
             reactor.threadpool.stop()
-        reactor.stop()
+        try:
+            reactor.stop()
+        except twisted.internet.error.ReactorNotRunning:
+            debug('Reactor wasn\'t running, so couldn\'t stop it')
 
         if self.settings:
             settings.saveSettings(self.settings)
 
         debug('Finished shutdown, goodbye')
-        return False #we must return false here due to using timeout_add
 
     def onStartStopCascading(self, event):
         ''' Toggles cascading '''
@@ -480,7 +500,7 @@ class CascadersFrame:
     def stopCascading(self):
         btn = self.builder.get_object('btStartStopCasc')
         self.cascading = False
-        self.client.stopCascading(lambda *a: btn.set_sensitive(True))
+        self.client.stopCascading().addCallback(lambda *a: btn.set_sensitive(True))
         btn.set_label('Start Cascading')
 
     def startCascading(self):
@@ -507,7 +527,7 @@ class CascadersFrame:
 
 
             self.cascading = True
-            self.client.startCascading(lambda *a: btn.set_sensitive(True))
+            self.client.startCascading().addCallback(lambda *a: btn.set_sensitive(True))
             btn.set_label('Stop Cascading')
 
     def onCascaderClick(self, tv, event):
@@ -564,11 +584,12 @@ class CascadersFrame:
                     if message:
                         wf(helpid, cascaderUsername, message)
 
-            self.client.askForHelp(helpid,
-                                   cascaderUsername,
-                                   helpDialog.getSubject(),
-                                   helpDialog.getDescription(),
-                                   onResponse)
+            d = self.client.askForHelp(helpid,
+                                       cascaderUsername,
+                                       helpDialog.getSubject(),
+                                       helpDialog.getDescription())
+            d.addCallback(onResponse)
+
     
     def onAddSubject(self, event):
         cb = self.builder.get_object('cbCascSubjectList')
