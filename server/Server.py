@@ -1,6 +1,8 @@
 from __future__ import with_statement
-from rpyc import Service 
-from rpyc.utils.server import ThreadedServer
+
+from twisted.spread import pb
+from twisted.internet import reactor
+
 from threading import RLock
 
 import logging
@@ -13,7 +15,13 @@ logger = logging.getLogger('MyLogger')
 logger.setLevel(logging.DEBUG)
 
 
-handler = logging.handlers.TimedRotatingFileHandler( LOG_FILENAME, when='W6', interval=1, backupCount=0, encoding=None, delay=False, utc=False)
+handler = logging.handlers.TimedRotatingFileHandler(LOG_FILENAME,
+                                                    when='W6',
+                                                    interval=1,
+                                                    backupCount=0,
+                                                    encoding=None) 
+                                                    #Don't work with python 2.6
+                                                    #, delay=False, utc=False)
 
 formmatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
 
@@ -25,17 +33,16 @@ logger.addHandler(logging.StreamHandler())
 
 data_lock = RLock()
 
-tokens = dict()
-
+tokens = {}
 
 subjectList = set(["inf1-fp","inf1-cl","inf1-da","inf1-op","inf2a","inf2b","inf2c-cs",
         "inf2-se","inf2d","Java","Haskell","Python","Ruby","C","C++","PHP",
         "JavaScript", "Perl", "SQL", "Bash", "Vim", "Emacs", "Eclipse", "Netbeans",
         "Version Control"])
 
-class UserToken(object):
-    def __init__(self, conn, user, hostname):
-        self.conn = conn
+class UserToken(pb.Referenceable):
+    def __init__(self, client, user, hostname):
+        self.client = client 
         self.user = user
         self.hostname = hostname
         self.stale = False
@@ -43,7 +50,7 @@ class UserToken(object):
         self.subjects = set()
         tokens[user]=self
     
-    def exposed_logout(self):
+    def remote_logout(self):
         '''
         Automatically called when the client disconnects
 
@@ -59,11 +66,14 @@ class UserToken(object):
         #Need to inform other clients 
         with data_lock:
             for value in tokens.itervalues():
-                #This is a remote produre call to the clients
-                value.conn.root.cascaderLeft(self.user)
+                try:
+                    #This is a remote produre call to the clients
+                    value.client.callRemote('cascaderLeft', self.user)
+                except pb.DeadReferenceError:
+                    logger.debug('Client wasn\'t connected')
+                    #TODO need to remove client from lists here
 
-        
-    def exposed_startCascading(self):
+    def remote_startCascading(self):
         '''
         Called by the client when the user wants to start cascading
 
@@ -77,11 +87,16 @@ class UserToken(object):
             #Need to inform all other clients that this cascader has joined
             for value in tokens.itervalues():
                 #This a remote procedure call to the client
-                value.conn.root.cascaderJoined(self.user, self.hostname, \
-                        self.subjects)
+                try:
+                    value.client.callRemote('cascaderJoined', self.user,
+                                            self.hostname, self.subjects)
+                except pb.DeadReferenceError:
+                    logger.debug('Client wasn\'t connected')
+                    #TODO need to remove client from lists here
+
         logger.info(self.user + " has started cascading")
 
-    def exposed_stopCascading(self):
+    def remote_stopCascading(self):
         '''
         Call by the client when the user wants to stop cascading
 
@@ -92,10 +107,14 @@ class UserToken(object):
         self.cascading = False
         with data_lock:
             for value in tokens.itervalues():
-                value.conn.root.cascaderLeft(self.user)
+                try:
+                    value.client.callRemote('cascaderLeft', self.user)
+                except pb.DeadReferenceError:
+                    logger.debug('Client wasn\'t connected')
+                    #TODO need to remove client from lists here
         logger.info(self.user + " has stopped cascading")
 
-    def exposed_addSubjects(self, subjects):
+    def remote_addSubjects(self, subjects):
         '''
         Called by the client when the user adds some subjects to their collections
 
@@ -110,10 +129,14 @@ class UserToken(object):
             self.subjects.update(subjects)
             if self.cascading:
                 for value in tokens.itervalues():
-                    value.conn.root.cascaderAddedSubjects(self.user, subjects)
+                    try:
+                        value.client.callRemote('cascaderAddedSubjects', self.user, subjects)
+                    except pb.DeadReferenceError:
+                        logger.debug('Client wasn\'t connected')
+                        #TODO need to remove client from lists here
         logger.info(self.user + " added " + str(list(subjects)) + " to their subject list")
 
-    def exposed_removeSubjects(self, subjects):
+    def remote_removeSubjects(self, subjects):
         '''
         Called by the client when the user removes some subjects from their 
         collection
@@ -131,10 +154,14 @@ class UserToken(object):
                     #item wasn't in set, ignore
                     logger.warn('Tried to remove %s from subjects, failed' % subject)
             for value in tokens.itervalues():
-                value.conn.root.cascaderRemovedSubjects(self.user, subjects)
+                try:
+                    value.client.callRemote('cascaderRemovedSubjects', self.user, subjects)
+                except pb.DeadReferenceError:
+                    logger.debug('Client wasn\'t connected')
+                    #TODO need to remove client from lists here
         logger.info(self.user + " removed " + str(list(subjects)) + " from their list")
 
-    def exposed_getCascaderList(self):
+    def remote_getCascaderList(self):
         '''
         Called by the client requesting a list of the current cascaders operating
         with their usernames, hostnames and the subjects they are cascading on.
@@ -149,7 +176,7 @@ class UserToken(object):
         logger.info(self.user + " asked for the cascader list")
         return returnvalue
     
-    def exposed_getSubjectList(self):
+    def remote_getSubjectList(self):
         '''
         Called by the client requesting a list of the current subjects that can 
         be cascaded
@@ -160,7 +187,7 @@ class UserToken(object):
         logger.info(self.user + " asked for the subject list")
         return subjectList
 
-    def exposed_askForHelp(self, helpId, username, subject, problem):
+    def remote_askForHelp(self, helpId, username, subject, problem):
         '''
         Called when the client is asking another user for help
 
@@ -173,17 +200,29 @@ class UserToken(object):
 
         logger.info(self.user + " asked " + username + " for help on " + problem + \
                 " in the subject " + subject)
-        response = tokens[username].conn.root.userAskingForHelp(helpId, self.user, \
-                self.hostname, subject, problem) 
+        try:
+            deferred = tokens[username].client.callRemote('userAskingForHelp',
+                                                          helpId, self.user,
+                                                          self.hostname,
+                                                          subject, problem) 
+        except pb.DeadReferenceError:
+            logger.debug('Client wasn\'t connected')
+            #TODO need to remove client from lists here
+
+        deferred.addCallback(onAskForHelpResponse)
+        return deferred 
+
+    def onAskForHelpResponse(self, result):
+        '''
+        Deals with logging from the cascaders response for asking for hlp
+        '''
         (answer,why) = response
         if answer:
             logger.info(username + "said yes, help is now being given")
         else:
             logger.info(username + "said no: " + why)
 
-        return response
-
-    def exposed_sendMessage(self, helpId, toUser, message):
+    def remote_sendMessage(self, helpId, toUser, message):
         '''
         Called when the client is wanting to send a message to another client
 
@@ -207,38 +246,29 @@ class UserToken(object):
         helpID is generated by the client and should just be passed on
         '''
 
-        self.conn.root.userSentMessage(helpId, message)
+        try:
+            self.client.callRemote('userSentMessage', helpId, message)
+        except pb.DeadReferenceError:
+            logger.debug('Client wasn\'t connected')
+            #TODO need to remove client from lists here
 
-    def exposed_ping(self):
+    def remote_ping(self):
         '''
         Can be used to see that the server is up and functioning
         '''
         return 'pong'
     
-    def exposed_eval(self, code):
+    def remote_eval(self, code):
         raise NotImplementedError('In your dreams')
 
-class ChatService(Service):
-    
-    #This is an automated method, it is not envoked by the coder
-    def on_connect(self):
-        self.token = None
-    
-    #This too is an automated method, it is not envoked by the coder
-    def on_disconnect(self):
-        if self.token:
-            self.token.exposed_logout()
-    
-    def exposed_userJoin(self, username, hostname):
+class ChatService(pb.Root):
+    def remote_userJoin(self, client, username, hostname):
         if username in tokens:
             raise ValueError("Username in use")
-        elif self.token and not self.token.stale:
-            raise ValueError("already logged in")
         else:
-            self.token = UserToken(self._conn, username, hostname)
-            return self.token
+            return UserToken(client, username, hostname)
 
 if __name__ == "__main__":
-    t = ThreadedServer(ChatService, port = 5010)
+    reactor.listenTCP(5010, pb.PBServerFactory(ChatService()))
     logger.info("Spinning the server up, stand by")
-    t.start()
+    reactor.run()
