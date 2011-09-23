@@ -23,6 +23,9 @@ class RpcService(pb.Referenceable):
         self.cascaderRemovedSubject = None
     #---------------------------------------------------------------------------
 
+    def getStateToCopy(self):
+        return {}
+
     def registerUserAskingForHelp(self, func):
         self.userAskingForHelp = func
 

@@ -284,18 +284,18 @@ class CascadersFrame:
 
         self.builder.get_object('lbUsername').set(self.username)
 
-        self.client = client.RpcClient(lambda b:self.service,
+        self.client = client.RpcClient(self.service,
                                        HOST,
                                        PORT,
                                        self.username,
                                        self.hostname)
 
         def subject(result):
-            self.subjects = [x for x in result.value]
+            self.subjects = [x for x in result]
             self.updateAllSubjects()
 
         def casc(result):
-            for usr, host, sub in result.value:
+            for usr, host, sub in result:
                 self.cascaders.addCascader(usr, host, sub)
             self.updateCascaderLists()
 
@@ -533,7 +533,7 @@ class CascadersFrame:
 
             def onResponse(result):
                 ''' Response from asking for help '''
-                accepted, message = result.value
+                accepted, message = result
                 wf = self.messageDialog.writeMessage
                 if accepted:
                     wf(helpid,

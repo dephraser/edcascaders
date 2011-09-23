@@ -37,21 +37,23 @@ class RpcClient:
                              computerHostname)
         deferred.addErrback(self._callConnectErrFunctions)
 
-    def _onGetRootObj(self, obj, service, username, computerHostname):
-        self.root = obj
-        d = self.root.callRemote('userJoin',
-                                 service,
-                                 username,
-                                 computerHostname)
+    def _onGetRootObj(self, root, service, username, computerHostname):
+        d = root.callRemote('userJoin',
+                             service,
+                             username,
+                             computerHostname)
         d.addCallback(self._callLoginFunctions)
         d.addErrback(self._callLoginErrFunctions)
 
     #---------------------------------------------------------------------------
-    def _callLoginFunctions(self, *a):
+    def _callLoginFunctions(self, userService):
         '''
         This is called on login, it also cleans up the queued functions as
         they are now possible to call
         '''
+        #TODO rename to soemthing better
+        self.root = userService
+
         [f() for f in self.loginFuncs]
 
         for details in self.queuedFunctions:
@@ -125,5 +127,11 @@ class RpcClient:
         self._callFunction('sendMessage', None, helpid, username, message)
 
     def askForHelp(self, helpid, username, subject, problem, callback=None):
-        self._callFunction('askForHelp', callback,
+        '''
+        Ask for help is implemented slightly diffferenetly from most other
+        functions on the server, in that it returns a deferred as its result
+        '''
+        fullCallback = lambda d: d.addCallback(callback)
+
+        self._callFunction('askForHelp', fullCallback,
                            helpid, username, subject, problem)
