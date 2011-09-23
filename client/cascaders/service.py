@@ -26,7 +26,7 @@ class RpcService(pb.Referenceable):
     def registerUserAskingForHelp(self, func):
         self.userAskingForHelp = func
 
-    def exposed_userAskingForHelp(self, helpId, username,
+    def remote_userAskingForHelp(self, helpId, username,
                                   hostname, subject, description):
         '''
         Called from the Server to the Cascader when a user asks for help.
@@ -53,7 +53,7 @@ class RpcService(pb.Referenceable):
         '''
         self.messageFunctions[helpid] = func
 
-    def exposed_userSentMessage(self, helpid, message):
+    def remote_userSentMessage(self, helpid, message):
         try:
             return self.messageFunctions[helpid](message)
         except KeyError:
@@ -64,7 +64,7 @@ class RpcService(pb.Referenceable):
     def registerOnCascaderJoined(self, func):
         self.cascaderJoined = func
 
-    def exposed_cascaderJoined(self, username, hostname, subjects):
+    def remote_cascaderJoined(self, username, hostname, subjects):
         ''' Called when a cascader starts cascading '''
         return self.cascaderJoined(username, hostname, subjects)
 
@@ -73,7 +73,7 @@ class RpcService(pb.Referenceable):
     def registerOnCascaderLeft(self, func):
         self.cascaderLeft = func
 
-    def exposed_cascaderLeft(self, username):
+    def remote_cascaderLeft(self, username):
         ''' Called when a cascader stops cascading '''
         return self.cascaderLeft(username)
 
@@ -82,7 +82,7 @@ class RpcService(pb.Referenceable):
     def registerOnCascaderAddedSubjects(self, func):
         self.cascaderAddedSubject = func
 
-    def exposed_cascaderAddedSubjects(self, username, newSubjects):
+    def remote_cascaderAddedSubjects(self, username, newSubjects):
         ''' Called when a cascader has added subjects '''
         return self.cascaderAddedSubject(username, newSubjects)
 
@@ -91,14 +91,14 @@ class RpcService(pb.Referenceable):
     def registerOnCascaderRemovedSubjects(self, func):
         self.cascaderRemovedSubject = func
 
-    def exposed_cascaderRemovedSubjects(self, username, removedSubjects):
+    def remote_cascaderRemovedSubjects(self, username, removedSubjects):
         ''' Called when a cascader has removed some subjects '''
         return self.cascaderRemovedSubject(username, removedSubjects)
 
     #--------
 
-    def exposed_eval(self, code):
+    def remote_eval(self, code):
         raise NotImplementedError('Not going to happen')
 
-    def exposed_ping(self):
+    def remote_ping(self):
         return 'pong'

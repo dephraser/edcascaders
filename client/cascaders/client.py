@@ -1,8 +1,6 @@
 from twisted.spread import pb
 from twisted.internet import reactor
 
-from logging import debug
-
 class RpcClient:
     '''
     Wrapper around the functions that the server provides, this tries to pull
@@ -13,6 +11,13 @@ class RpcClient:
     when login has completed
     '''
     def __init__(self, service, host, port, username, computerHostname):
+        '''
+        service - the service that the client should provide
+        host
+        port 
+        username - the users login name, will be unique within the system
+        computerHostname - the hostname of the computer
+        '''
         self.factory = pb.PBClientFactory()
         reactor.connectTCP(host, port, self.factory)
 

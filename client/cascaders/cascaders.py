@@ -5,6 +5,7 @@ Startup file, responsible for setting up the application and starting the gui
 '''
 
 import logging
+import sys
 from optparse import OptionParser
 import dbus.mainloop.glib
 
@@ -15,10 +16,6 @@ from twisted.internet import reactor
 
 import mainframe
 import dbusutil
-
-
-
-
 
 class RaiseableService(dbusutil.DbusService):
     '''Service provides a method of raising the window to dbus'''
@@ -31,6 +28,9 @@ class RaiseableService(dbusutil.DbusService):
         self.app.window.present()
 
 if __name__ == '__main__':
+    if sys.version >= (3,):
+        logging.error('Python version is too high, this requires python 2')
+        sys.exit(1)
     dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
 
     parser = OptionParser()

@@ -299,11 +299,13 @@ class CascadersFrame:
                 self.cascaders.addCascader(usr, host, sub)
             self.updateCascaderLists()
 
+        #nb: these functions are not called until login
         self.client.getSubjectList(subject)
         self.client.getCascaderList(casc)
-
         self.client.registerLoginCallback(lambda: status.set('Connected'))
 
+        #error "handling"
+        #TODO give better messages
         def loginErr():
             errorDialog('Failed to login')
             self.quit()

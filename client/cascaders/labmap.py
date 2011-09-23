@@ -107,6 +107,9 @@ class Map:
         '''
         Redraws the map with the given filters applied, so that only the 
         cascaders that match the parameters are highlighted
+
+        onClick a function called when the user clicks on a dialog box,
+        this function takes one argument which is the host of the computer
         '''
         [x.destroy() for x in self.widget.get_children()]
 
