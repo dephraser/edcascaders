@@ -11,9 +11,14 @@ with open(os.path.join(wd, 'data', 'hosts')) as f:
     for lab in locator.getLabs():
         for host, location in locator.getMap(lab):
 
-            process = Popen(["ssh", host], stdout=PIPE)
-            exit_code = os.waitpid(process.pid, 0)
-            output = process.communicate()[0]
-            
-            if 'Name or service not known' in output:
+            (c_stdin,c_stdout,c_stderr) = os.popen3('ssh %s' % host,'r')
+            out = c_stdout.read()
+            err = c_stderr.read()
+            c_stdin.close()
+            c_stdout.close()
+            c_stderr.close()
+
+            if 'Name or service not known' in err:
                 print 'Lookup of %s failed' % host
+            else:
+                print 'Fine for %s' % host
