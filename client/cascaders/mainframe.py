@@ -130,7 +130,7 @@ class Cascaders:
 #-------------------------------------------------------------------------------
 #constants
 PORT = 5010
-HOST = 'kazila.jacobessex.com'
+HOST = 'www.comp-soc.com'
 #-------------------------------------------------------------------------------
 
 class CascadersFrame:
