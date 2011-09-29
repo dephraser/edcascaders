@@ -58,7 +58,13 @@ class RpcService(pb.Referenceable):
 
     def remote_userSentMessage(self, helpid, message):
         try:
-            return self.messageFunctions[helpid](message)
+            return self.messageFunctions[helpid]('user', message)
+        except KeyError:
+            warn('Message dropped as no handler (helpid: %s)' % helpid)
+
+    def remote_serverSentMessage(self, helpid, message):
+        try:
+            return self.messageFunctions[helpid]('server', message)
         except KeyError:
             warn('Message dropped as no handler (helpid: %s)' % helpid)
 

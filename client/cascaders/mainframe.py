@@ -130,7 +130,7 @@ class Cascaders:
 #-------------------------------------------------------------------------------
 #constants
 PORT = 5010
-HOST = 'kazila.jacobessex.com'
+HOST = 'localhost'
 #-------------------------------------------------------------------------------
 
 class CascadersFrame:
@@ -320,6 +320,31 @@ class CascadersFrame:
 
         self.client.registerLoginErrCallback(loginErr)
         self.client.registerConnectErrCallback(connectErr)
+    
+    #--------------------------------------------------------------------------
+    def setupMessagingWindow(self, helpid, toUsername, remoteHost, isUserCasc):
+        '''
+        toUsername - the username of the remote
+        remoteHost - the hostname of the remote
+        '''
+        self.messageDialog.addTab(helpid, toUsername,
+                                  self.hostname, remoteHost, isUserCasc)
+
+        #setup functions to write to the messages from the message dialog to
+        #the server
+        def onMessageFromServer(fromType, message):
+            if fromType == 'user':
+                fromName = fromUsername 
+            elif fromType == 'server':
+                fromName = 'Server'
+            self.messageDialog.writeMessage(helpid, self.username, message)
+            
+        self.service.registerOnMessgeHandler(helpid, onMessageFromServer)
+
+        wf =  lambda msg: self.client.sendMessage(helpid, toUsername, subject, msg)
+        self.messageDialog.registerMessageCallback(helpid, wf)
+
+        self.messageDialog.window.show_all()
 
     #--------------------------------------------------------------------------
     # Service callback functions, most of these are just simple wrappers
@@ -327,6 +352,10 @@ class CascadersFrame:
 
     def onUserAskingForHelp(self,  helpid, username, host,
                             subject, description):
+        '''
+        Called from the server to the client cascader to see if help can
+        be accepted
+        '''
         debug('Help wanted by: %s with host %s' % (username, host))
 
         dialog = AcceptHelpDialog(self.window, username, subject, description)
@@ -336,20 +365,7 @@ class CascadersFrame:
             debug('Help Accepted')
 
             print 'Ok, host is %s' % host
-            self.messageDialog.addTab(helpid, username,
-                                      self.hostname, host, True)
-
-            #setup functions to write to the messages from the message dialog to
-            #the server
-            f = lambda msg: self.messageDialog.writeMessage(helpid, username, msg)
-            self.service.registerOnMessgeHandler(helpid, f)
-
-            #functions to write from server to message window
-            wf =  lambda msg: self.client.sendMessage(helpid, username, subject, msg)
-            self.messageDialog.registerMessageCallback(helpid, wf)
-
-            self.messageDialog.writeMessage(helpid, 'SYSTEM', 'Accepted Request')
-            self.messageDialog.window.show_all()
+            self.setupMessagingWindow(helpid, username, host, True)
 
             return (True, '')
 
@@ -552,44 +568,16 @@ class CascadersFrame:
             debug('Dialog is ok, asking for help')
             helpid = (self.username, util.generateUnqiueId())
 
-            #add a tab
-            self.messageDialog.addTab(helpid, cascaderUsername, self.hostname,
-                                      cascHost, False)
+            self.setupMessagingWindow(helpid, cascaderUsername, cascHost, False) 
 
-            #setup functions to write to the message stuff when messages
-            #come from the server to the client
-            f = lambda msg: self.messageDialog.writeMessage(helpid, cascaderUsername, msg)
-            self.service.registerOnMessgeHandler(helpid, f)
-
-            #setup handler to send messages from the dialog to the server
-            wf =  lambda msg: self.client.sendMessage(helpid, cascaderUsername, subject, msg)
-            self.messageDialog.registerMessageCallback(helpid, wf)
-
-            self.messageDialog.writeMessage(helpid, 'SYSTEM', 'Wating for response')
-            self.messageDialog.window.show_all()
-
-            def onResponse(result):
-                ''' Response from asking for help '''
-                accepted, message = result
-                wf = self.messageDialog.writeMessage
-                if accepted:
-                    wf(helpid,
-                       'SYSTEM',
-                       cascaderUsername + ' accepted your help request')
-                else:
-                    wf(helpid,
-                       'SYSTEM',
-                       cascaderUsername + ' rejected your help request')
-                    
-                    if message:
-                        wf(helpid, cascaderUsername, message)
+            self.messageDialog.writeMessage(helpid,
+                                            'SYSTEM',
+                                            'Wating for response')
 
             d = self.client.askForHelp(helpid,
                                        cascaderUsername,
                                        helpDialog.getSubject(),
                                        helpDialog.getDescription())
-            d.addCallback(onResponse)
-
     
     def onAddSubject(self, event):
         cb = self.builder.get_object('cbCascSubjectList')
