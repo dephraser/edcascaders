@@ -219,18 +219,32 @@ class UserService(pb.Referenceable):
             logger.debug('Client wasn\'t connected')
             users[username].remote_logout()
 
-        deferred.addCallback(onAskForHelpResponse)
+        cb = lambda res : self.onAskForHelpResponse(helpId, username, res)
+        deferred.addCallback(cb)
         return deferred 
 
-    def onAskForHelpResponse(self, result):
+    def onAskForHelpResponse(self, helpId, cascUsername, result):
         '''
         Deals with logging from the cascaders response for asking for hlp
         '''
-        (answer,why) = response
+        (answer,why) = result
+
         if answer:
-            logger.info(username + "said yes, help is now being given")
+            logger.info(cascUsername + "said yes, help is now being given")
+
+            msg = cascUsername + ' accepted your help request' 
+            self.client.callRemote('serverSentMessage', helpId, msg)
+
+            messages = ['Remember to use pastebin to show code',
+                        ('It may be easier to ask for a cascader to come to '
+                         'your desk so you can explain the problem in person')]
+            for m in messages:
+                self.client.callRemote('serverSentMessage', helpId, m)
         else:
-            logger.info(username + "said no: " + why)
+            logger.info(cascUsername + "said no: " + why)
+
+            msg = cascUsername + ' rejected your help request' 
+            self.client.callRemote('serverSentMessage', helpId, msg)
 
     def remote_sendMessage(self, helpId, toUser, message):
         '''
