@@ -292,21 +292,6 @@ class CascadersFrame:
                                        self.username,
                                        self.hostname)
 
-        def subject(result):
-            self.subjects = [x for x in result]
-            self.updateAllSubjects()
-
-        def casc(result):
-            for usr, host, sub in result:
-                self.cascaders.addCascader(usr, host, sub)
-            self.updateCascaderLists()
-
-        #nb: these functions are not called until login
-        self.client.getSubjectList().addCallback(subject)
-        self.client.getCascaderList().addCallback(casc)
-        self.client.registerLoginCallback(lambda *a: status.set('Connected'))
-
-        #error "handling"
         def loginErr(reason):
             reason = reason.trap(ValueError)
             errorDialog('Failed to login, server reported %s' % reason.getErrorMessage())
@@ -318,9 +303,65 @@ class CascadersFrame:
                         'server, the connection was refused')
             self.quit()
 
-        self.client.registerLoginErrCallback(loginErr)
-        self.client.registerConnectErrCallback(connectErr)
+        self.attemptLogin([], [connectErr], [loginErr])
+
+    def attemptLogin(self, sucFuncs, connectErrFuncs, loginErrFuncs):
+        status = self.builder.get_object('lbStatus')
+        status.set('Connecting...')
+
+        def subject(result):
+            self.subjects = [x for x in result]
+            self.updateAllSubjects()
+
+        def casc(result):
+            for usr, host, sub in result:
+                self.cascaders.addCascader(usr, host, sub)
+            self.updateCascaderLists()
+
+        #nb: these functions are not called until login
+        sl = lambda *a: self.client.getSubjectList().addCallback(subject)
+        cl = lambda *a: self.client.getCascaderList().addCallback(casc)
+        self.client.registerLoginCallback(sl)
+        self.client.registerLoginCallback(cl)
+        self.client.registerLoginCallback(lambda *a: status.set('Connected'))
+
+        #error "handling"
+        for loginErr in loginErrFuncs:
+            self.client.registerLoginErrCallback(loginErr)
+
+        for connectErr in connectErrFuncs:
+            self.client.registerConnectErrCallback(connectErr)
+
+        self.client.connect()
     
+    #--------------------------------------------------------------------------
+    def onServerLost(self):
+        '''
+        This should be called when the connection to the server is lost
+        it attempts to reconnect to the server
+        '''
+        errorDialog('Connection to the server lost'
+                    ' commands and messages will not be sent to the server'
+                    ' until reconneced')
+
+        def success():
+            debug('Logged in again, back with the program')
+
+        def loginError(reason):
+            reason = reason.trap(ValueError)
+            errorDialog('Failed to login, server reported %s' % reason.getErrorMessage())
+            self.quit()
+
+        reconnectFunc = lambda r: gobject.timeout_add(5000, connectError, r)
+        def connectError(reason):
+            debug('Trying to connect...')
+            self.attemptLogin([success], [reconnectFunc], [loginError])
+            return False
+
+        self.attemptLogin([success],
+                          [reconnectFunc],
+                          [loginError])
+
     #--------------------------------------------------------------------------
     def setupMessagingWindow(self, helpid, toUsername, remoteHost, isUserCasc):
         '''
@@ -341,8 +382,13 @@ class CascadersFrame:
             
         self.service.registerOnMessgeHandler(helpid, onMessageFromServer)
 
-        wf =  lambda msg: self.client.sendMessage(helpid, toUsername, subject, msg)
-        self.messageDialog.registerMessageCallback(helpid, wf)
+        def writeFunction(message):
+            try:
+                self.client.sendMessage(helpid, toUsername, subject, msg)
+            except client.NotConnected:
+                self.onServerLost()
+
+        self.messageDialog.registerMessageCallback(helpid, writeFunction)
 
         self.messageDialog.window.show_all()
 
@@ -516,7 +562,12 @@ class CascadersFrame:
     def stopCascading(self):
         btn = self.builder.get_object('btStartStopCasc')
         self.cascading = False
-        self.client.stopCascading().addCallback(lambda *a: btn.set_sensitive(True))
+
+        try:
+            self.client.stopCascading().addCallback(lambda *a: btn.set_sensitive(True))
+        except client.NotConnected:
+            self.onServerLost()
+
         btn.set_label('Start Cascading')
 
     def startCascading(self):
@@ -543,8 +594,11 @@ class CascadersFrame:
 
 
             self.cascading = True
-            self.client.startCascading().addCallback(lambda *a: btn.set_sensitive(True))
-            btn.set_label('Stop Cascading')
+            try:
+                self.client.startCascading().addCallback(lambda *a: btn.set_sensitive(True))
+                btn.set_label('Stop Cascading')
+            except client.NotConnected:
+                self.onServerLost()
 
     def onCascaderClick(self, tv, event):
         if event.button != 1 or event.type != gtk.gdk._2BUTTON_PRESS:
@@ -574,10 +628,13 @@ class CascadersFrame:
                                             'SYSTEM',
                                             'Wating for response')
 
-            d = self.client.askForHelp(helpid,
-                                       cascaderUsername,
-                                       helpDialog.getSubject(),
-                                       helpDialog.getDescription())
+            try:
+                d = self.client.askForHelp(helpid,
+                                           cascaderUsername,
+                                           helpDialog.getSubject(),
+                                           helpDialog.getDescription())
+            except client.NotConnected:
+                self.onServerLost()
     
     def onAddSubject(self, event):
         cb = self.builder.get_object('cbCascSubjectList')
@@ -592,8 +649,11 @@ class CascadersFrame:
                 ls.append([subject])
                 self.cascadeSubjects.add(subject)
 
-        self.client.addSubjects(subjects)
-        debug('Subjects now: %s' % self.cascadeSubjects)
+        try:
+            self.client.addSubjects(subjects)
+            debug('Subjects now: %s' % self.cascadeSubjects)
+        except client.NotConnected:
+            self.onServerLost()
 
     
     def onRemoveSubject(self, event):
@@ -601,13 +661,16 @@ class CascadersFrame:
         model, itr = tv.get_selection().get_selected()
         subject = model.get_value(itr, 0)
 
-        if subject and subject in self.cascadeSubjects:
-            debug('Removing subject: %s' % subject)
-            self.client.removeSubjects([subject])
-            self.cascadeSubjects.remove(subject)
+        try:
+            if subject and subject in self.cascadeSubjects:
+                debug('Removing subject: %s' % subject)
+                self.client.removeSubjects([subject])
+                self.cascadeSubjects.remove(subject)
 
-            model.remove(itr)
-        debug('Subjects now: %s' % self.cascadeSubjects)
+                model.remove(itr)
+            debug('Subjects now: %s' % self.cascadeSubjects)
+        except client.NotConnected:
+            self.onServerLost()
 
         if len(self.cascadeSubjects) == 0 and self.cascading:
             debug('No more subjects and we are cascading')
