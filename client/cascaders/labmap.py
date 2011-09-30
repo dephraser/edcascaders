@@ -6,7 +6,10 @@ from logging import warn
 import ConfigParser as configparser
 from collections import defaultdict
 
-import gtk
+try:
+    import gtk
+except RuntimeError:
+    warn('Couldn\'t open display, not all functionality will be availble')
 
 class Locator():
     '''

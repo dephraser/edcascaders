@@ -8,12 +8,13 @@ from threading import RLock
 import logging
 import logging.handlers
 
-LOG_FILENAME = 'cascader.log'
+#------------------------------------------------------------------------------
+# logging
 
+LOG_FILENAME = 'cascader.log'
 
 logger = logging.getLogger('MyLogger')
 logger.setLevel(logging.DEBUG)
-
 
 handler = logging.handlers.TimedRotatingFileHandler(LOG_FILENAME,
                                                     when='W6',
@@ -29,18 +30,23 @@ handler.setFormatter(formmatter)
 logger.addHandler(handler)
 logger.addHandler(logging.StreamHandler())
 
-
-
-data_lock = RLock()
-
-tokens = {}
-
+#------------------------------------------------------------------------------
+# constants
 subjectList = set(["inf1-fp","inf1-cl","inf1-da","inf1-op","inf2a","inf2b","inf2c-cs",
         "inf2-se","inf2d","Java","Haskell","Python","Ruby","C","C++","PHP",
         "JavaScript", "Perl", "SQL", "Bash", "Vim", "Emacs", "Eclipse", "Netbeans",
         "Version Control"])
 
-class UserToken(pb.Referenceable):
+
+
+#maybe not needed. CPython isn't threaded
+data_lock = RLock()
+
+#global dict of users that are currently logged in
+users = {}
+
+
+class UserService(pb.Referenceable):
     def __init__(self, client, user, hostname):
         self.client = client 
         self.user = user
@@ -48,7 +54,7 @@ class UserToken(pb.Referenceable):
         self.stale = False
         self.cascading = False
         self.subjects = set()
-        tokens[user]=self
+        users[user] = self
     
     def remote_logout(self):
         '''
@@ -61,17 +67,17 @@ class UserToken(pb.Referenceable):
             return
         self.stale = True
 
-        del tokens[self.user] 
+        del users[self.user] 
 
         #Need to inform other clients 
         with data_lock:
-            for value in tokens.itervalues():
+            for user in users.itervalues():
                 try:
                     #This is a remote produre call to the clients
-                    value.client.callRemote('cascaderLeft', self.user)
+                    user.client.callRemote('cascaderLeft', self.user)
                 except pb.DeadReferenceError:
                     logger.debug('Client wasn\'t connected')
-                    #TODO need to remove client from lists here
+                    user.remote_logout()
 
     def remote_startCascading(self):
         '''
@@ -85,14 +91,14 @@ class UserToken(pb.Referenceable):
         logger.info(self.user + " is going to start cascading")
         with data_lock:
             #Need to inform all other clients that this cascader has joined
-            for value in tokens.itervalues():
+            for user in users.itervalues():
                 #This a remote procedure call to the client
                 try:
-                    value.client.callRemote('cascaderJoined', self.user,
+                    user.client.callRemote('cascaderJoined', self.user,
                                             self.hostname, self.subjects)
                 except pb.DeadReferenceError:
                     logger.debug('Client wasn\'t connected')
-                    #TODO need to remove client from lists here
+                    user.remote_logout()
 
         logger.info(self.user + " has started cascading")
 
@@ -106,12 +112,13 @@ class UserToken(pb.Referenceable):
 
         self.cascading = False
         with data_lock:
-            for value in tokens.itervalues():
+            for user in users.itervalues():
                 try:
-                    value.client.callRemote('cascaderLeft', self.user)
+                    user.client.callRemote('cascaderLeft', self.user)
                 except pb.DeadReferenceError:
                     logger.debug('Client wasn\'t connected')
-                    #TODO need to remove client from lists here
+                    user.remote_logout()
+
         logger.info(self.user + " has stopped cascading")
 
     def remote_addSubjects(self, subjects):
@@ -128,12 +135,13 @@ class UserToken(pb.Referenceable):
         with data_lock:
             self.subjects.update(subjects)
             if self.cascading:
-                for value in tokens.itervalues():
+                for user in users.itervalues():
                     try:
-                        value.client.callRemote('cascaderAddedSubjects', self.user, subjects)
+                        user.client.callRemote('cascaderAddedSubjects', self.user, subjects)
                     except pb.DeadReferenceError:
                         logger.debug('Client wasn\'t connected')
-                        #TODO need to remove client from lists here
+                        user.remote_logout()
+
         logger.info(self.user + " added " + str(list(subjects)) + " to their subject list")
 
     def remote_removeSubjects(self, subjects):
@@ -153,12 +161,14 @@ class UserToken(pb.Referenceable):
                 except KeyError:
                     #item wasn't in set, ignore
                     logger.warn('Tried to remove %s from subjects, failed' % subject)
-            for value in tokens.itervalues():
+
+            for user in users.itervalues():
                 try:
-                    value.client.callRemote('cascaderRemovedSubjects', self.user, subjects)
+                    user.client.callRemote('cascaderRemovedSubjects', self.user, subjects)
                 except pb.DeadReferenceError:
                     logger.debug('Client wasn\'t connected')
-                    #TODO need to remove client from lists here
+                    user.remote_logout()
+
         logger.info(self.user + " removed " + str(list(subjects)) + " from their list")
 
     def remote_getCascaderList(self):
@@ -172,7 +182,7 @@ class UserToken(pb.Referenceable):
 
         with data_lock:
             returnvalue = [(value.user, value.hostname, value.subjects)
-                            for value in tokens.itervalues() if value.cascading]
+                            for value in users.itervalues() if value.cascading]
         logger.info(self.user + " asked for the cascader list")
         return returnvalue
     
@@ -201,26 +211,40 @@ class UserToken(pb.Referenceable):
         logger.info(self.user + " asked " + username + " for help on " + problem + \
                 " in the subject " + subject)
         try:
-            deferred = tokens[username].client.callRemote('userAskingForHelp',
+            deferred = users[username].client.callRemote('userAskingForHelp',
                                                           helpId, self.user,
                                                           self.hostname,
                                                           subject, problem) 
         except pb.DeadReferenceError:
             logger.debug('Client wasn\'t connected')
-            #TODO need to remove client from lists here
+            users[username].remote_logout()
 
-        deferred.addCallback(onAskForHelpResponse)
+        cb = lambda res : self.onAskForHelpResponse(helpId, username, res)
+        deferred.addCallback(cb)
         return deferred 
 
-    def onAskForHelpResponse(self, result):
+    def onAskForHelpResponse(self, helpId, cascUsername, result):
         '''
         Deals with logging from the cascaders response for asking for hlp
         '''
-        (answer,why) = response
+        (answer,why) = result
+
         if answer:
-            logger.info(username + "said yes, help is now being given")
+            logger.info(cascUsername + "said yes, help is now being given")
+
+            msg = cascUsername + ' accepted your help request' 
+            self.client.callRemote('serverSentMessage', helpId, msg)
+
+            messages = ['Remember to use pastebin to show code',
+                        ('It may be easier to ask for a cascader to come to '
+                         'your desk so you can explain the problem in person')]
+            for m in messages:
+                self.client.callRemote('serverSentMessage', helpId, m)
         else:
-            logger.info(username + "said no: " + why)
+            logger.info(cascUsername + "said no: " + why)
+
+            msg = cascUsername + ' rejected your help request' 
+            self.client.callRemote('serverSentMessage', helpId, msg)
 
     def remote_sendMessage(self, helpId, toUser, message):
         '''
@@ -232,7 +256,11 @@ class UserToken(pb.Referenceable):
         HelpId is generated by the client and should just be passed on
         '''
 
-        tokens[toUser].message(helpId, message)
+        try:
+            users[toUser].message(helpId, message)
+        except pb.DeadReferenceError:
+            logger.debug('Client wasn\'t connected')
+            self.remote_logout()
 
         logger.info(self.user + "->" + toUser + ":" + message)
 
@@ -250,25 +278,29 @@ class UserToken(pb.Referenceable):
             self.client.callRemote('userSentMessage', helpId, message)
         except pb.DeadReferenceError:
             logger.debug('Client wasn\'t connected')
-            #TODO need to remove client from lists here
+            self.remote_logout()
 
     def remote_ping(self):
-        '''
-        Can be used to see that the server is up and functioning
-        '''
+        ''' Can be used to see that the server is up and functioning '''
         return 'pong'
     
     def remote_eval(self, code):
         raise NotImplementedError('In your dreams')
 
-class ChatService(pb.Root):
+
+class LoginService(pb.Root):
+    ''' 
+    Provides a service that requires the user to login before being able
+    to access other methods. This reduces the amount of checks required
+    in the UserService class
+    '''
     def remote_userJoin(self, client, username, hostname):
-        if username in tokens:
+        if username in users:
             raise ValueError("Username in use")
         else:
-            return UserToken(client, username, hostname)
+            return UserService(client, username, hostname)
 
 if __name__ == "__main__":
-    reactor.listenTCP(5010, pb.PBServerFactory(ChatService()))
+    reactor.listenTCP(5010, pb.PBServerFactory(LoginService()))
     logger.info("Spinning the server up, stand by")
     reactor.run()

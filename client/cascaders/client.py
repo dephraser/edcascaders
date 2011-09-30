@@ -1,15 +1,24 @@
 from twisted.spread import pb
 from twisted.internet import reactor
 
+class NotConnected(pb.DeadReferenceError):
+    pass
+
+
 class DeferredCall(object):
     ''' Simple wrapper around twisteds deferred call '''
     def __init__(self, deferred):
         self.deferred = deferred
 
+        self.callbacks = []
+        self.errbacks = []
+
     def addCallback(self, function, *args):
+        self.callbacks.append((function, args))
         self.deferred.addCallback(function, *args)
 
     def addErrCallback(self, function, *args):
+        self.errbacks.append((function, args))
         self.deferred.addErrback(function, *args)
 
 
@@ -96,8 +105,8 @@ class RpcClient:
         username - the users login name, will be unique within the system
         computerHostname - the hostname of the computer
         '''
-        self.factory = pb.PBClientFactory()
-        reactor.connectTCP(host, port, self.factory)
+        self.host = host 
+        self.port = port
 
         self.connectionErrFuncs = [] #functions to be called if conn failed
         self.loginErrFuncs = [] #funcs to be called if login failed
@@ -107,12 +116,26 @@ class RpcClient:
         
         self.server = None #class that holds the primary server functions
 
+        self.service = service
+        self.username = username
+        self.computerHostname = computerHostname
+
+        self.factory = pb.PBClientFactory()
+
+    def connect(self):
         #connect to the server
-        deferred = self.factory.getRootObject()
+        reactor.connectTCP(self.host, self.port, self.factory)
+
+        try:
+            deferred = self.factory.getRootObject()
+        except pb.DeadReferenceError:
+            raise NotConnected
+
         deferred.addCallback(self._userLogin,
-                             service,
-                             username,
-                             computerHostname)
+                             self.service,
+                             self.username,
+                             self.computerHostname)
+
         deferred.addErrback(self._callConnectErrFunctions)
 
     def _userLogin(self, root, service, username, computerHostname):
@@ -132,6 +155,9 @@ class RpcClient:
         self.server = userService
 
         [f() for f in self.loginFuncs]
+        self.loginFuncs = []
+        self.loginErrFuncs = []
+        self.connectionErrFuncs = []
 
         for deferred in self.queuedFunctions:
             deferred.call(self._callFunction)
@@ -139,9 +165,15 @@ class RpcClient:
 
     def _callLoginErrFunctions(self, reason):
         [f(reason) for f in self.loginErrFuncs]
+        self.loginFuncs = []
+        self.loginErrFuncs = []
+        self.connectionErrFuncs = []
 
     def _callConnectErrFunctions(self, reason):
         [f(reason) for f in self.connectionErrFuncs]
+        self.loginFuncs = []
+        self.loginErrFuncs = []
+        self.connectionErrFuncs = []
 
     def registerLoginErrCallback(self, callback):
         self.loginErrFuncs.append(callback)
@@ -168,7 +200,15 @@ class RpcClient:
             self.queuedFunctions.append(qdc)
             return qdc
         else:
-            return DeferredCall(self.server.callRemote(function, *args, **kwargs))
+            try:
+                return DeferredCall(self.server.callRemote(function, *args, **kwargs))
+            except pb.DeadReferenceError:
+                self.server = None
+
+                qdc = QueuedDeferredCall(function, *args, **kwargs)
+                self.queuedFunctions.append(qdc)
+
+                raise NotConnected('Failed to call ' + function)
 
     #--------------------------------------------------------------------------
     # simple functions used on startup
