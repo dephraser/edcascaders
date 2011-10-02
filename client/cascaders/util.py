@@ -2,9 +2,21 @@
 This is a bit messy, but this is a set of utility functions
 '''
 import time
-from logging import error
+from logging import error, debug
 
 import gtk 
+
+from collections import defaultdict
+
+class CallbackMixin(object):
+    def __init__(self):
+        self._callbacks = defaultdict(list)
+
+    def _addCallback(self, name, f):
+        self._callbacks[name].append(f)
+
+    def _callCallbacks(self, name, *args, **kwargs):
+        return [f(*args, **kwargs) for f in self._callbacks[name]]
 
 def errorDialog(msg):
     '''

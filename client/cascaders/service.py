@@ -4,7 +4,9 @@ from logging import warn
 
 from twisted.spread import pb
 
-class RpcService(pb.Referenceable):
+from util import CallbackMixin
+
+class RpcService(pb.Referenceable, CallbackMixin):
     '''
     This provides the service for data sent from the server to the client
 
@@ -13,6 +15,8 @@ class RpcService(pb.Referenceable):
     for simplicity you can only have one callback registered
     '''
     def __init__(self, *args, **kwargs):
+        CallbackMixin.__init__(self)
+
         self.messageFunctions = {}
         self.userAskingForHelp = None
 
@@ -27,7 +31,7 @@ class RpcService(pb.Referenceable):
         return {}
 
     def registerUserAskingForHelp(self, func):
-        self.userAskingForHelp = func
+        self._addCallback('userAskingForHelp', func)
 
     def remote_userAskingForHelp(self, helpId, username,
                                   hostname, subject, description):
@@ -45,8 +49,8 @@ class RpcService(pb.Referenceable):
 
         This is response is then passed back to the user as 
         '''
-        return self.userAskingForHelp(helpId, username,
-                                      hostname, subject, description)
+        return self._callCallbacks('userAskingForHelp', helpId, username,
+                                  hostname, subject, description)
 
     #--------
 
@@ -54,55 +58,63 @@ class RpcService(pb.Referenceable):
         '''
         Register a callback for that spesific helpid
         '''
-        self.messageFunctions[helpid] = func
+        self._addCallback(helpid, func)
 
     def remote_userSentMessage(self, helpid, message):
         try:
-            return self.messageFunctions[helpid]('user', message)
+            return self._callCallbacks(helpid, 'user', message)
         except KeyError:
             warn('Message dropped as no handler (helpid: %s)' % helpid)
 
     def remote_serverSentMessage(self, helpid, message):
         try:
-            return self.messageFunctions[helpid]('server', message)
+            return self._callCallbacks(helpid, 'server', message)
         except KeyError:
             warn('Message dropped as no handler (helpid: %s)' % helpid)
+    #--------
+
+    def registerOnUserLeft(self, func):
+        self._addCallback('userLeft', func)
+
+    def remote_userLeft(self, username):
+        ''' Called when a cascader starts cascading '''
+        return self._callCallbacks('userLeft', username)
 
     #--------
-    
+
     def registerOnCascaderJoined(self, func):
-        self.cascaderJoined = func
+        self._addCallback('cascaderJoined', func)
 
     def remote_cascaderJoined(self, username, hostname, subjects):
         ''' Called when a cascader starts cascading '''
-        return self.cascaderJoined(username, hostname, subjects)
+        return self._callCallbacks('cascaderJoined', username, hostname, subjects)
 
     #--------
 
     def registerOnCascaderLeft(self, func):
-        self.cascaderLeft = func
+        self._addCallback('cascaderLeft',  func)
 
     def remote_cascaderLeft(self, username):
         ''' Called when a cascader stops cascading '''
-        return self.cascaderLeft(username)
+        return self._callCallbacks('cascaderLeft', username)
 
     #--------
 
     def registerOnCascaderAddedSubjects(self, func):
-        self.cascaderAddedSubject = func
+        self._addCallback('cascaderAddedSubject', func)
 
     def remote_cascaderAddedSubjects(self, username, newSubjects):
         ''' Called when a cascader has added subjects '''
-        return self.cascaderAddedSubject(username, newSubjects)
+        return self._callCallbacks('cascaderAddedSubject', username, newSubjects)
 
     #--------
 
     def registerOnCascaderRemovedSubjects(self, func):
-        self.cascaderRemovedSubject = func
+        self._addCallback('cascaderRemovedSubject', func)
 
     def remote_cascaderRemovedSubjects(self, username, removedSubjects):
         ''' Called when a cascader has removed some subjects '''
-        return self.cascaderRemovedSubject(username, removedSubjects)
+        return self._callCallbacks('cascaderRemovedSubject', username, removedSubjects)
 
     #--------
 

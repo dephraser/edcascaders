@@ -1,5 +1,9 @@
+from logging import debug
+
 from twisted.spread import pb
 from twisted.internet import reactor
+
+from util import CallbackMixin
 
 class NotConnected(pb.DeadReferenceError):
     pass
@@ -88,7 +92,7 @@ class DeferredResultWrapper(object):
         self.deferred.addCallback(function)
 
 
-class RpcClient:
+class RpcClient(CallbackMixin):
     '''
     Wrapper around the functions that the server provides, this tries to pull
     some of the bulk and extra lines of code out of the gui classes 
@@ -97,30 +101,41 @@ class RpcClient:
     to call functions on the server, they will just be queued and called
     when login has completed
     '''
-    def __init__(self, service, host, port, username, computerHostname):
+    def __init__(self, service, host, port, username, hostname):
         '''
         service - the service that the client should provide
         host
         port 
-        username - the users login name, will be unique within the system
-        computerHostname - the hostname of the computer
         '''
+        CallbackMixin.__init__(self)
+
+        self.service = service
         self.host = host 
         self.port = port
+        self.username = username
+        self.hostname = hostname
 
-        self.connectionErrFuncs = [] #functions to be called if conn failed
-        self.loginErrFuncs = [] #funcs to be called if login failed
-        self.loginFuncs = [] #functions to be called on login sucess
+        self.factory = pb.PBClientFactory()
 
         self.queuedFunctions = [] #list of functions queued until login
         
         self.server = None #class that holds the primary server functions
 
-        self.service = service
-        self.username = username
-        self.computerHostname = computerHostname
+        self.autoReconnect = False
 
-        self.factory = pb.PBClientFactory()
+    #---------------------------------------------------------------------------
+    # Callbacks that allow handling of unexpected events
+
+    def registerOnConnected(self, f):
+        return self._addCallback('connected', f)
+
+    def registerOnDisconnected(self, f):
+        return self._addCallback('disconnected', f)
+
+    def registerOnLogin(self, f):
+        debug('Registerd callback')
+        return self._addCallback('login', f)
+    #---------------------------------------------------------------------------
 
     def connect(self):
         #connect to the server
@@ -131,59 +146,61 @@ class RpcClient:
         except pb.DeadReferenceError:
             raise NotConnected
 
-        deferred.addCallback(self._userLogin,
-                             self.service,
-                             self.username,
-                             self.computerHostname)
+        deferred.addCallback(self._setRoot)
+        deferred.addCallback(lambda *a: self._callCallbacks('connected'))
+        return deferred
 
-        deferred.addErrback(self._callConnectErrFunctions)
+    def login(self):
+        assert self.root is not None, 'Must have got the root object before login'
+        d = self.root.callRemote('userJoin',
+                                 self.service,
+                                 self.username,
+                                 self.hostname)
+        d.addCallback(lambda server: setattr(self, 'server', server))
+        d.addCallback(lambda *a: setattr(self, 'autoReconnect', True))
+        d.addCallback(lambda *a: self._callCallbacks('login'))
+        return d
 
-    def _userLogin(self, root, service, username, computerHostname):
-        d = root.callRemote('userJoin',
-                             service,
-                             username,
-                             computerHostname)
-        d.addCallback(self._callLoginFunctions)
-        d.addErrback(self._callLoginErrFunctions)
+    def _setRoot(self, root):
+        self.root = root
+        root.notifyOnDisconnect(self._onDisconnected)
 
     #---------------------------------------------------------------------------
-    def _callLoginFunctions(self, userService):
-        '''
-        This is called on login, it also cleans up the queued functions as
-        they are now possible to call
-        '''
-        self.server = userService
+    # handles disconnected servers
+    
+    def _onDisconnected(self, root):
+        debug('Disonnect caught..')
+        self._callCallbacks('disconnected')
+        self.root = None
+        self.server = None
 
-        [f() for f in self.loginFuncs]
-        self.loginFuncs = []
-        self.loginErrFuncs = []
-        self.connectionErrFuncs = []
+        if self.autoReconnect:
+            debug('\tReconnecting...')
+            self._repeatConnect()
+        else:
+            debug('\tDisconnect ignored')
 
-        for deferred in self.queuedFunctions:
-            deferred.call(self._callFunction)
-        self.queuedFunctions = []
+    def _repeatConnect(self, i=0):
+        debug('Trying to connect... (Attempt %d)' % i)
 
-    def _callLoginErrFunctions(self, reason):
-        [f(reason) for f in self.loginErrFuncs]
-        self.loginFuncs = []
-        self.loginErrFuncs = []
-        self.connectionErrFuncs = []
+        def onErr(reason):
+            debug('Failed to connect: %s' % reason.getErrorMessage())
+            reactor.callLater(10, lambda: self._repeatConnect(i+1))
 
-    def _callConnectErrFunctions(self, reason):
-        [f(reason) for f in self.connectionErrFuncs]
-        self.loginFuncs = []
-        self.loginErrFuncs = []
-        self.connectionErrFuncs = []
+        d = self.connect()
+        d.addCallback(self._repeatLogin)
+        d.addCallback(lambda*a: debug('Connected on attempt %d' % i))
+        d.addErrback(onErr)
 
-    def registerLoginErrCallback(self, callback):
-        self.loginErrFuncs.append(callback)
+    def _repeatLogin(self, result):
+        debug('Trying to login...')
+        def onErr(reason):
+            debug('Failed to login: %s' % reason.getErrorMessage())
+            reactor.callLater(10, self._repeatLogin)
 
-    def registerConnectErrCallback(self, callback):
-        self.connectionErrFuncs.append(callback)
-
-    def registerLoginCallback(self, callback):
-        ''' This is in most cases not required, as calls a queued '''
-        self.loginFuncs.append(callback)
+        d = self.login()
+        d.addCallback(lambda *a: debug('Logged in'))
+        d.addErrback(onErr)
 
     #---------------------------------------------------------------------------
 
@@ -249,4 +266,5 @@ class RpcClient:
                                                         problem))
     #--------------------------------------------------------------------------
     def logout(self):
+        self.autoReconnect = False
         return self._callFunction('logout')

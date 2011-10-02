@@ -22,6 +22,8 @@ import client, service
 import labmap
 import settings
 
+from cascadermodel import CascaderModel
+
 from requirements import RequireFunctions
 
 #message boxes
@@ -34,105 +36,7 @@ from trayicon import TrayIcon
 import util
 from util import getComboBoxText, initTreeView, errorDialog
 
-
-class Cascaders:
-    ''' Manages a list of cascaders and provides helpful functions '''
-
-    def __init__(self, locator, username):
-        '''
-        locator is a object that implements labFromHostname.
-
-        username is the current users username. This is excluded from
-        results so that you are never displayed as a cascader
-        '''
-        self.locator = locator
-        self.username = username
-        self.cascaders = {}
-
-    def __str__(self):
-        return str(self.cascaders)
-
-    def addCascader(self, username, host, subjects):
-        if username != self.username:
-            self.cascaders[username] = (host, list(subjects))
-
-    def removeCascader(self, username):
-        try:
-            del self.cascaders[username]
-        except KeyError:
-            warn('Cascader that left didn\'t exist (maybe this user)')
-
-    def addCascaderSubjects(self, username, subjects):
-        try:
-            host, curSubjects = self.cascaders[username]
-            self.cascaders[username] = (host, curSubjects + list(subjects))
-        except KeyError:
-            warn('Cascader (%s) that added subjects '
-                 'didn\'t exist (maybe this user)' % username)
-
-    def removeCascaderSubjects(self, username, subjects):
-        debug('Cascader %s removed subjects %s' % (username, subjects))
-        try: 
-            curSubjects = self.cascaders[username][1]
-            for remSubject in subjects:
-                try:
-                    curSubjects.remove(remSubject)
-                except ValueError:
-                    debug('User wasn\'t cascading subject %s' % remSubject)
-        except KeyError:
-            warn('Tried to remove subjects from cascader %s, '
-                 'prob not cascading or this user' % username)
-
-    def findCascaders(self, lab=None, subjects=None, host=None):
-        '''
-        Find all cascaders that match the given patterns, although
-        this will not return any cascaders that are not cascading in 
-        any subjects
-
-        TODO really slow, not sure it matters
-        '''
-        for user, (cascHost, cascSubjects) in self.cascaders.iteritems():
-            if len(cascSubjects) == 0:
-                continue
-
-            if host and host != cascHost:
-                continue
-
-            if lab and self.locator.labFromHostname(cascHost) != lab:
-                continue
-
-            if (subjects and
-                    len(set(subjects).intersection(set(cascSubjects))) == 0):
-                continue
-
-            yield user, (host, cascSubjects)
-
-    def findCascader(self, username=None, **kwargs):
-        ''' Wrapper around findCascaders, returns the first match or None '''
-        if username is not None:
-            if len(kwargs):
-                error('Username not supported with other args')
-                return None
-            try:
-                host, subjects = self.cascaders[username]
-                if len(subjects) == 0:
-                    return None
-                return username, (host, subjects)
-            except KeyError:
-                warn('Couldn\'t find cascader with username: ' % username)
-                return None
-
-        try:
-            return self.findCascaders(**kwargs).next()
-        except StopIteration:
-            return None
- 
 #-------------------------------------------------------------------------------
-#constants
-PORT = 5010
-HOST = 'kazila.jacobessex.com'
-#-------------------------------------------------------------------------------
-
 class CascadersFrame:
     def __init__(self, debugEnabled=False, show=True, host=None):
         '''
@@ -143,25 +47,19 @@ class CascadersFrame:
         '''
         self.debugEnabled = debugEnabled
 
-        self.subjects  = [] #list of subjects, retrived from the server
-
-        self.cascadeSubjects = set() #list of subjects the user is cascading in
-        self.cascading = False #user cascading
-
-        self.client = None #client for connection to server
 
         hosts = os.path.join(os.path.dirname(__file__), 'data', 'hosts')
         self.locator = labmap.Locator(open(hosts))
         self.username = self._getUsername()
 
-        self.cascaders = Cascaders(self.locator, self.username) 
-
-        self.messageDialog = MessageDialog(self.locator, self.cascaders)
 
         if host is None:
             self.hostname = socket.gethostname().lower()
         else:
             self.hostname = host
+
+        self.model = CascaderModel(self.locator, self.username, self.hostname)
+        self.messageDialog = MessageDialog(self.locator, self.model.getCascaderData())
 
         #slightly more sane method of setting things up that uses depency
         #tracking
@@ -170,15 +68,17 @@ class CascadersFrame:
         req.add('tray', self.initTray, ['gui'])
         req.add('map', self.initMap, ['gui'])
         req.add('labs', self.initLabs, ['map'])
-        req.add('service', self.initService)
-        req.add('connection', self.initConnection, ['service'])
+        req.add('modelcallbacks', self.initModelCallbacks)
+        req.add('connection', self.initConnection)
         req.add('signals', self.initSignals, ['gui', 'settings'])
         req.add('settings', self.initSettings, ['gui', 'connection'])
+        req.add('autostart', self.askAutostart, ['gui', 'settings'])
         req.run()
 
         if show:
             self.window.show_all()
 
+    def askAutostart(self):
         if self.settings['asked_autostart'] == False:
             self.settings['asked_autostart'] = True
             message = gtk.MessageDialog(None,
@@ -195,7 +95,7 @@ class CascadersFrame:
     def initMap(self):
         self.map = labmap.Map(self.builder.get_object('tblMap'),
                               self.locator,
-                              self.cascaders)
+                              self.model.getCascaderData())
 
     def initTray(self):
         icon = os.path.join(os.path.dirname(__file__),
@@ -246,7 +146,7 @@ class CascadersFrame:
         self.addSubjects(self.settings['cascSubjects'])
 
         if self.settings['cascading'] and self.settings['autocascade']:
-            self.startCascading()
+            self.model.startCascading()
 
     def _getUsername(self):
         try:
@@ -262,19 +162,13 @@ class CascadersFrame:
             self.quit()
         return logname
 
-    def initService(self):
+    def initModelCallbacks(self):
         '''
-        This sets up the service that the client provides to the server.
+        This sets up the service callbacks
         '''
-        s = self.service = service.RpcService()
-
-        s.registerOnCascaderRemovedSubjects(self.onCascaderRemovedSubjects)
-        s.registerOnCascaderAddedSubjects(self.onCascaderAddedSubjects)
-
-        s.registerOnCascaderJoined(self.onCascaderJoined)
-        s.registerOnCascaderLeft(self.onCascaderLeft)
-
-        s.registerUserAskingForHelp(self.onUserAskingForHelp)
+        self.model.registerOnCascaderChanged(self.updateCascaderLists)
+        self.model.registerOnSubjectChanged(self.updateAllSubjects)
+        self.model.registerOnUserAskingForHelp(self.onUserAskingForHelp)
 
     def initConnection(self):
         '''
@@ -285,12 +179,6 @@ class CascadersFrame:
         status.set('Connecting...')
 
         self.builder.get_object('lbUsername').set(self.username)
-
-        self.client = client.RpcClient(self.service,
-                                       HOST,
-                                       PORT,
-                                       self.username,
-                                       self.hostname)
 
         def loginErr(reason):
             reason = reason.trap(ValueError)
@@ -303,64 +191,13 @@ class CascadersFrame:
                         'server, the connection was refused')
             self.quit()
 
-        self.attemptLogin([], [connectErr], [loginErr])
+        def connected(result):
+            d = self.model.login()
+            d.addErrback(loginErr)
 
-    def attemptLogin(self, sucFuncs, connectErrFuncs, loginErrFuncs):
-        status = self.builder.get_object('lbStatus')
-        status.set('Connecting...')
-
-        def subject(result):
-            self.subjects = [x for x in result]
-            self.updateAllSubjects()
-
-        def casc(result):
-            for usr, host, sub in result:
-                self.cascaders.addCascader(usr, host, sub)
-            self.updateCascaderLists()
-
-        #nb: these functions are not called until login
-        sl = lambda *a: self.client.getSubjectList().addCallback(subject)
-        cl = lambda *a: self.client.getCascaderList().addCallback(casc)
-        self.client.registerLoginCallback(sl)
-        self.client.registerLoginCallback(cl)
-        self.client.registerLoginCallback(lambda *a: status.set('Connected'))
-
-        #error "handling"
-        for loginErr in loginErrFuncs:
-            self.client.registerLoginErrCallback(loginErr)
-
-        for connectErr in connectErrFuncs:
-            self.client.registerConnectErrCallback(connectErr)
-
-        self.client.connect()
-    
-    #--------------------------------------------------------------------------
-    def onServerLost(self):
-        '''
-        This should be called when the connection to the server is lost
-        it attempts to reconnect to the server
-        '''
-        errorDialog('Connection to the server lost'
-                    ' commands and messages will not be sent to the server'
-                    ' until reconneced')
-
-        def success():
-            debug('Logged in again, back with the program')
-
-        def loginError(reason):
-            reason = reason.trap(ValueError)
-            errorDialog('Failed to login, server reported %s' % reason.getErrorMessage())
-            self.quit()
-
-        reconnectFunc = lambda r: gobject.timeout_add(5000, connectError, r)
-        def connectError(reason):
-            debug('Trying to connect...')
-            self.attemptLogin([success], [reconnectFunc], [loginError])
-            return False
-
-        self.attemptLogin([success],
-                          [reconnectFunc],
-                          [loginError])
+        d = self.model.connect()
+        d.addCallback(connected)
+        d.addErrback(connectErr)
 
     #--------------------------------------------------------------------------
     def setupMessagingWindow(self, helpid, toUsername, remoteHost, isUserCasc):
@@ -384,7 +221,7 @@ class CascadersFrame:
 
         def writeFunction(message):
             try:
-                self.client.sendMessage(helpid, toUsername, subject, msg)
+                self.model.sendMessage(helpid, toUsername, subject, msg)
             except client.NotConnected:
                 self.onServerLost()
 
@@ -418,36 +255,17 @@ class CascadersFrame:
         debug('Help rejected')
         return (False, '')
 
-    def onCascaderAddedSubjects(self, username, subjects):
-        debug('Cascader %s added subjects %s' % (username, subjects))
-        self.cascaders.addCascaderSubjects(username, subjects)
-        self.updateCascaderLists()
-
-    def onCascaderRemovedSubjects(self, username, subjects):
-        debug('Cascader %s removed subjects %s' % (username, subjects))
-        self.cascaders.removeCascaderSubjects(username, subjects)
-        self.updateCascaderLists()
-
-    def onCascaderJoined(self, username, hostname, subjects):
-        debug('New cascader: %s' % username)
-        self.cascaders.addCascader(username, hostname, subjects)
-        self.updateCascaderLists()
-
-    def onCascaderLeft(self, username):
-        debug('Cascader left: %s' % username)
-        self.cascaders.removeCascader(username)
-        self.updateCascaderLists()
 
     #--------------------------------------------------------------------------
-    def updateAllSubjects(self):
+    def updateAllSubjects(self, subjects):
         '''
         Calling this ensures that the gui reflects the current list of subjects
         '''
-        debug('Subjects: %s' % self.subjects)
+        debug('Subjects: %s' % subjects)
 
         cascCb = self.builder.get_object('cbCascSubjectList')
         lst = gtk.ListStore(gobject.TYPE_STRING)
-        [lst.append([subject]) for subject in self.subjects]
+        [lst.append([subject]) for subject in subjects]
         cascCb.set_model(lst)
         cell = gtk.CellRendererText()
         cascCb.set_active(0)
@@ -457,20 +275,18 @@ class CascadersFrame:
         cb = self.builder.get_object('cbFilterSubject')
         lst = gtk.ListStore(gobject.TYPE_STRING)
         lst.append(['All'])
-        [lst.append([subject]) for subject in self.subjects]
+        [lst.append([subject]) for subject in subjects]
         cb.set_model(lst)
         cell = gtk.CellRendererText()
         cb.set_active(0)
         cb.pack_start(cell, True)
         cb.add_attribute(cell, 'text', 0)
 
-    def updateCascaderLists(self):
+    def updateCascaderLists(self, cascaders):
         '''
         Cleans the list and updates the list of cascaders avaible. Call
         when filters have been changed
         '''
-        debug('Cascaders: %s' % self.cascaders)
-
         ls = self.builder.get_object('lsCascList')
         ls.clear()
 
@@ -482,8 +298,8 @@ class CascadersFrame:
         filterLab = getComboBoxText(cbLab)
         filterLab = filterLab if filterLab != 'All' else None
 
-        cascaders = self.cascaders.findCascaders(lab=filterLab,
-                                                 subjects=filterSub)
+        cascaders = cascaders.findCascaders(lab=filterLab,
+                                            subjects=filterSub)
         [ls.append([username]) for username, _ in cascaders]
 
     #--------------------------------------------------------------------------
@@ -497,8 +313,8 @@ class CascadersFrame:
         debug('Starting shutdown')
 
         if self.settings:
-            self.settings['cascSubjects'] = list(self.cascadeSubjects)
-            self.settings['cascading'] = self.cascading
+            self.settings['cascSubjects'] = list(self.model.cascadingSubjects())
+            self.settings['cascading'] = self.model.isCascading()
             self.settings['autostart'] = self.builder.get_object('cbAutostart').get_active()
             self.settings['autocascade'] = self.builder.get_object('cbAutocascade').get_active()
 
@@ -508,11 +324,11 @@ class CascadersFrame:
         if self.window:
             self.window.hide_all() 
 
-        if self.client is not None:
+        if self.model is not None:
             debug('Logging out')
             try:
                 gobject.timeout_add(5000, self._finishQuitTimeout)
-                l = self.client.logout()
+                l = self.model.logout()
                 l.addCallback(self._finishQuit)
                 l.addErrCallback(self._finishQuitErr)
             except Exception:
@@ -552,7 +368,7 @@ class CascadersFrame:
         ''' Toggles cascading '''
         btn = self.builder.get_object('btStartStopCasc')
         btn.set_sensitive(False)
-        if self.cascading:
+        if self.model.isCascading():
             debug('Stopping Cascading')
             self.stopCascading()
         else:
@@ -561,44 +377,31 @@ class CascadersFrame:
 
     def stopCascading(self):
         btn = self.builder.get_object('btStartStopCasc')
-        self.cascading = False
-
-        try:
-            self.client.stopCascading().addCallback(lambda *a: btn.set_sensitive(True))
-        except client.NotConnected:
-            self.onServerLost()
-
+        self.model.stopCascading().addCallback(lambda *a: btn.set_sensitive(True))
         btn.set_label('Start Cascading')
 
     def startCascading(self):
         btn = self.builder.get_object('btStartStopCasc')
-        if len(self.cascadeSubjects) == 0:
-            errorDialog('You cannot start cascading when you no subjects')
-            btn.set_sensitive(True)
-        else:
-            #we offer the user to automatically start cascading
-            askedAutoCascading = self.settings['asked_autocascade']
-            autoCascade = self.settings['autocascade'] == False
-            if askedAutoCascading == False and autoCascade:
-                self.settings['asked_autocascade'] = True
 
-                message = gtk.MessageDialog(None,
-                                            gtk.DIALOG_MODAL,
-                                            gtk.MESSAGE_INFO,
-                                            gtk.BUTTONS_YES_NO,
-                                            "Do you want to enable auto cascading")
-                resp = message.run()
-                if resp == gtk.RESPONSE_YES:
-                    self.builder.get_object('cbAutocascade').set_active(True)
-                message.destroy()
+        #we offer the user to automatically start cascading
+        askedAutoCascading = self.settings['asked_autocascade']
+        autoCascade = self.settings['autocascade'] == False
+        if askedAutoCascading == False and autoCascade:
+            self.settings['asked_autocascade'] = True
+
+            message = gtk.MessageDialog(None,
+                                        gtk.DIALOG_MODAL,
+                                        gtk.MESSAGE_INFO,
+                                        gtk.BUTTONS_YES_NO,
+                                        "Do you want to enable auto cascading")
+            resp = message.run()
+            if resp == gtk.RESPONSE_YES:
+                self.builder.get_object('cbAutocascade').set_active(True)
+            message.destroy()
 
 
-            self.cascading = True
-            try:
-                self.client.startCascading().addCallback(lambda *a: btn.set_sensitive(True))
-                btn.set_label('Stop Cascading')
-            except client.NotConnected:
-                self.onServerLost()
+        self.model.startCascading().addCallback(lambda *a: btn.set_sensitive(True))
+        btn.set_label('Stop Cascading')
 
     def onCascaderClick(self, tv, event):
         if event.button != 1 or event.type != gtk.gdk._2BUTTON_PRESS:
@@ -643,46 +446,25 @@ class CascadersFrame:
     def addSubjects(self, subjects):
         ls = self.builder.get_object('lsCascSubjects')
         for subject in subjects:
-            if subject and not subject in self.cascadeSubjects:
-                debug('Adding subject: %s' % subject)
+            debug('Adding subject: %s' % subject)
+            ls.append([subject])
 
-                ls.append([subject])
-                self.cascadeSubjects.add(subject)
-
-        try:
-            self.client.addSubjects(subjects)
-            debug('Subjects now: %s' % self.cascadeSubjects)
-        except client.NotConnected:
-            self.onServerLost()
-
+        self.model.addSubjects(subjects)
     
     def onRemoveSubject(self, event):
         tv = self.builder.get_object('tvCascSubjects')
         model, itr = tv.get_selection().get_selected()
         subject = model.get_value(itr, 0)
+        model.remove(itr)
 
-        try:
-            if subject and subject in self.cascadeSubjects:
-                debug('Removing subject: %s' % subject)
-                self.client.removeSubjects([subject])
-                self.cascadeSubjects.remove(subject)
-
-                model.remove(itr)
-            debug('Subjects now: %s' % self.cascadeSubjects)
-        except client.NotConnected:
-            self.onServerLost()
-
-        if len(self.cascadeSubjects) == 0 and self.cascading:
-            debug('No more subjects and we are cascading')
-            self.stopCascading()
-
+        self.model.removeSubjects(subjects)
 
     # Filter Stuff
     def onSubjectSelect(self, event):
-        self.updateCascaderLists()
+        self.updateCascaderLists(self.model.getCascaderData())
     
     def onLabSelect(self, event):
-        self.updateCascaderLists()
+        self.updateCascaderLists(self.model.getCascaderData())
 
     #-- -----------------------------------------------------------------------
 
@@ -694,7 +476,7 @@ class CascadersFrame:
         '''
         debug('Filter Lab Changed')
 
-        self.updateCascaderLists()
+        self.updateCascaderLists(self.model.getCascaderData())
 
         cbLab = self.builder.get_object('cbFilterLab')
         lab = getComboBoxText(cbLab)
@@ -702,7 +484,7 @@ class CascadersFrame:
 
     def onFilterSubjectChange(self, evt):
         debug('Filter Subject Changed')
-        self.updateCascaderLists()
+        self.updateCascaderLists(self.model.getCascaderData())
 
     def updateMap(self, lab):
         cbSubjects = self.builder.get_object('cbFilterSubject')

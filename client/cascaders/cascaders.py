@@ -14,7 +14,7 @@ gtk2reactor.install()
 
 from twisted.internet import reactor
 
-import mainframe
+import cascaderview
 import dbusutil
 
 class RaiseableService(dbusutil.DbusService):
@@ -47,7 +47,7 @@ if __name__ == '__main__':
     debugEnabled = options.debug is not None
 
     if debugEnabled:
-        logging.basicConfig(level=logging.DEBUG)
+        logging.basicConfig(level=logging.DEBUG, format='%(filename)s - %(funcName)s : %(message)s')
 
     #we use dbus to ensure that there is only one running instance of the
     #program. When in debug mode there can be more than one instance
@@ -58,7 +58,7 @@ if __name__ == '__main__':
         client = dbusutil.DbusClient(interface, path)
         client.showWindow()
     else:
-        win = mainframe.CascadersFrame(debugEnabled,
+        win = cascaderview.CascadersFrame(debugEnabled,
                                        show=showWindow,
                                        host=options.host)
         obj = RaiseableService(interface, path, win)
