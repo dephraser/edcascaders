@@ -66,7 +66,7 @@ class UserService(pb.Referenceable):
         try:
             self.client.callRemote('ping')
         except pb.DeadReferenceError:
-            self.user.remote_logout()
+            self.remote_logout()
         reactor.callLater(120, self.startPingClientLoop)
     
     def remote_logout(self):
@@ -84,6 +84,7 @@ class UserService(pb.Referenceable):
 
         #Need to inform other clients 
         with data_lock:
+            toLogout = []
             for user in users.itervalues():
                 try:
                     if user.cascading:
@@ -91,7 +92,8 @@ class UserService(pb.Referenceable):
                     user.client.callRemote('userLeft', self.user)
                 except pb.DeadReferenceError:
                     logger.debug('Client wasn\'t connected')
-                    user.remote_logout()
+                    toLogout.append(user)
+            [u.remote_logout() for u in toLogout]
 
     def remote_startCascading(self):
         '''
@@ -105,6 +107,7 @@ class UserService(pb.Referenceable):
         logger.info(self.user + " is going to start cascading")
         with data_lock:
             #Need to inform all other clients that this cascader has joined
+            toLogout = []
             for user in users.itervalues():
                 #This a remote procedure call to the client
                 try:
@@ -112,7 +115,8 @@ class UserService(pb.Referenceable):
                                             self.hostname, self.subjects)
                 except pb.DeadReferenceError:
                     logger.debug('Client wasn\'t connected')
-                    user.remote_logout()
+                    toLogout.append(user)
+            [u.remote_logout() for u in toLogout]
 
         logger.info(self.user + " has started cascading")
 
@@ -126,12 +130,14 @@ class UserService(pb.Referenceable):
 
         self.cascading = False
         with data_lock:
+            toLogout = []
             for user in users.itervalues():
                 try:
                     user.client.callRemote('cascaderLeft', self.user)
                 except pb.DeadReferenceError:
                     logger.debug('Client wasn\'t connected')
-                    user.remote_logout()
+                    toLogout.append(user)
+            [u.remote_logout() for u in toLogout]
 
         logger.info(self.user + " has stopped cascading")
 
@@ -148,13 +154,15 @@ class UserService(pb.Referenceable):
 
         with data_lock:
             self.subjects.update(subjects)
-            if self.cascading:
+            if self.cascading: #don't need to inform if not cascaing
+                toLogout = []
                 for user in users.itervalues():
                     try:
                         user.client.callRemote('cascaderAddedSubjects', self.user, subjects)
                     except pb.DeadReferenceError:
                         logger.debug('Client wasn\'t connected')
-                        user.remote_logout()
+                        toLogout.append(user)
+                [u.remote_logout() for u in toLogout]
 
         logger.info(self.user + " added " + str(list(subjects)) + " to their subject list")
 
@@ -169,19 +177,16 @@ class UserService(pb.Referenceable):
         subjects = set(subjects).intersection(subjectList)
 
         with data_lock:
-            for subject in subjects:
-                try:
-                    self.subjects.remove(subject)
-                except KeyError:
-                    #item wasn't in set, ignore
-                    logger.warn('Tried to remove %s from subjects, failed' % subject)
+            self.subjects = self.subjects - set(subjects)
 
+            toLogout = []
             for user in users.itervalues():
                 try:
                     user.client.callRemote('cascaderRemovedSubjects', self.user, subjects)
                 except pb.DeadReferenceError:
                     logger.debug('Client wasn\'t connected')
-                    user.remote_logout()
+                    toLogout.append(user)
+            [u.remote_logout() for u in toLogout]
 
         logger.info(self.user + " removed " + str(list(subjects)) + " from their list")
 
