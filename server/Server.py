@@ -55,6 +55,19 @@ class UserService(pb.Referenceable):
         self.cascading = False
         self.subjects = set()
         users[user] = self
+
+        self.startPingClientLoop()
+
+    def startPingClientLoop(self):
+        '''
+        This ensures that cascaders who are not connected are removed from 
+        the system
+        '''
+        try:
+            self.client.callRemote('ping')
+        except pb.DeadReferenceError:
+            self.user.remote_logout()
+        reactor.callLater(120, self.startPingClientLoop)
     
     def remote_logout(self):
         '''
@@ -73,8 +86,9 @@ class UserService(pb.Referenceable):
         with data_lock:
             for user in users.itervalues():
                 try:
-                    #This is a remote produre call to the clients
-                    user.client.callRemote('cascaderLeft', self.user)
+                    if user.cascading:
+                        user.client.callRemote('cascaderLeft', self.user)
+                    user.client.callRemote('userLeft', self.user)
                 except pb.DeadReferenceError:
                     logger.debug('Client wasn\'t connected')
                     user.remote_logout()
