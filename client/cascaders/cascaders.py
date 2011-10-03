@@ -47,7 +47,7 @@ if __name__ == '__main__':
     debugEnabled = options.debug is not None
 
     if debugEnabled:
-        logging.basicConfig(level=logging.DEBUG, format='%(filename)s - %(funcName)s : %(message)s')
+        logging.basicConfig(level=logging.DEBUG, format='%(filename)s(%(lineno)s):%(funcName)s %(message)s')
 
     #we use dbus to ensure that there is only one running instance of the
     #program. When in debug mode there can be more than one instance
