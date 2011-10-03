@@ -449,8 +449,9 @@ class CascadersFrame:
     def addSubjects(self, subjects):
         ls = self.builder.get_object('lsCascSubjects')
         for subject in subjects:
-            debug('Adding subject: %s' % subject)
-            ls.append([subject])
+            if subject not in self.model.cascadeSubjects:
+                debug('Adding subject: %s' % subject)
+                ls.append([subject])
 
         self.model.addSubjects(subjects)
     
@@ -460,7 +461,7 @@ class CascadersFrame:
         subject = model.get_value(itr, 0)
         model.remove(itr)
 
-        self.model.removeSubjects(subjects)
+        self.model.removeSubjects([subject])
 
     # Filter Stuff
     def onSubjectSelect(self, event):

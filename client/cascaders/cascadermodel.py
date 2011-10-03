@@ -231,7 +231,7 @@ class CascaderModel(CallbackMixin):
         debug('Logging in...')
         def subject(result):
             debug('Got subjects from login')
-            self.subjects = [x for x in result]
+            self.subjects = set([x for x in result])
             self._callCallbacks('subjectschanged', self.subjects)
 
         def casc(result):
@@ -316,13 +316,14 @@ class CascaderModel(CallbackMixin):
             self.cascadeSubjects = self.cascadeSubjects & set(subjects)
             return self.client.addSubjects(subjects)
         else:
-            subjectsToAdd = set(subjects) - self.cascadeSubjects
-            self.cascadeSubjects = self.cascadeSubjects & subjectsToAdd
+            subjectsToAdd = set(subjects) & self.subjects
+            self.cascadeSubjects = self.cascadeSubjects | subjectsToAdd
+
             debug('Adding subjects: %s' % str(subjectsToAdd))
             return self.client.addSubjects(subjectsToAdd)
 
     @_handleServerLost
-    def removeSubject(self, subjects):
-        subjectsToRemove = set(subjects) | self.cascadeSubjects
+    def removeSubjects(self, subjects):
+        subjectsToRemove = set(subjects) & self.subjects
         self.cascadeSubjects = self.cascadeSubjects - subjectsToRemove
-        return self.client.addSubjects(subjectsToAdd)
+        return self.client.removeSubjects(subjectsToAdd)
