@@ -143,6 +143,8 @@ class CascadersFrame:
         autocascade = self.settings['autocascade']
         self.builder.get_object('cbAutocascade').set_active(autocascade)
 
+        debug('Got subjects from settings: %s' % str(self.settings['cascSubjects']))
+
         self.addSubjects(self.settings['cascSubjects'])
 
         if self.settings['cascading'] and self.settings['autocascade']:
@@ -313,6 +315,7 @@ class CascadersFrame:
         debug('Starting shutdown')
 
         if self.settings:
+            debug('Updating Settings')
             self.settings['cascSubjects'] = list(self.model.cascadingSubjects())
             self.settings['cascading'] = self.model.isCascading()
             self.settings['autostart'] = self.builder.get_object('cbAutostart').get_active()

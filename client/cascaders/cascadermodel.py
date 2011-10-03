@@ -312,11 +312,13 @@ class CascaderModel(CallbackMixin):
         force - sends the subjects to the server, even if they may be duplicated
         '''
         if force == True:
+            debug('Adding subjects: %s' % str(subjects))
             self.cascadeSubjects = self.cascadeSubjects & set(subjects)
             return self.client.addSubjects(subjects)
         else:
             subjectsToAdd = set(subjects) - self.cascadeSubjects
             self.cascadeSubjects = self.cascadeSubjects & subjectsToAdd
+            debug('Adding subjects: %s' % str(subjectsToAdd))
             return self.client.addSubjects(subjectsToAdd)
 
     @_handleServerLost
