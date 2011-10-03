@@ -251,7 +251,7 @@ class RpcClient(CallbackMixin):
 
     #--------------------------------------------------------------------------
     # messaging related
-    def sendMessage(self, helpid, username, subject, message):
+    def sendMessage(self, helpid, username, message):
         return self._callFunction('sendMessage', helpid, username, message)
 
     def askForHelp(self, helpid, username, subject, problem):

@@ -53,14 +53,17 @@ class CascadersData(object):
         >>> cd.findCascader(username='remote')
         ('remote', ('remotehost', set(['a', 'b'])))
         '''
-        if username != self.username:
+        try:
+            _, curSubjects = self.cascaders[username]
+            self.cascaders[username] = (host, set(subjects) | curSubjects)
+        except KeyError:
             self.cascaders[username] = (host, set(subjects))
 
     def removeCascader(self, username):
         try:
             del self.cascaders[username]
         except KeyError:
-            warn('Cascader that left didn\'t exist (maybe this user)')
+            warn('Cascader that left didn\'t exist')
 
     def addCascaderSubjects(self, username, subjects):
         '''
@@ -70,34 +73,48 @@ class CascadersData(object):
         >>> cd.addCascaderSubjects('remote', ['a'])
         >>> cd.findCascader(username='remote')
         ('remote', ('remotehost', set(['a'])))
+
+        >>> cd = CascadersData(None, 'me')
+        >>> cd.addCascader('remote', 'remotehost', [])
+        >>> cd.addCascaderSubjects('remote', ['a'])
+        >>> cd.findCascader(username='remote')
+        ('remote', ('remotehost', set(['a'])))
         '''
         try:
             host, curSubjects = self.cascaders[username]
-            self.cascaders[username] = (host, curSubjects & set(subjects))
+            self.cascaders[username] = (host, curSubjects | set(subjects))
         except KeyError:
             warn('Cascader (%s) that added subjects '
-                 'didn\'t exist (maybe this user)' % username)
+                 'didn\'t exist' % username)
+            self.cascaders[username] = (None, set(subjects))
 
     def removeCascaderSubjects(self, username, subjects):
         debug('Cascader %s removed subjects %s' % (username, subjects))
         try: 
             host, curSubjects = self.cascaders[username]
-            curSubjects = curSubjects - set(subjects)
-            self.cascaders[username] = host, curSubjects
+            self.cascaders[username] = host, curSubjects - set(subjects)
         except KeyError:
             warn('Tried to remove subjects from cascader %s, '
-                 'prob not cascading or this user' % username)
+                 'prob not cascading' % username)
 
-    def findCascaders(self, lab=None, subjects=None, host=None):
+    def findCascaders(self, lab=None, subjects=None, host=None,
+                            includeMe = False):
         '''
         Find all cascaders that match the given patterns, although
         this will not return any cascaders that are not cascading in 
         any subjects
 
         TODO really slow, not sure it matters
+
+        >>> cd = CascadersData(None, 'me')
+        >>> cd.addCascader('remote', 'remotehost', [])
+        >>> cd.findCascader(username='remote')
         '''
         for user, (cascHost, cascSubjects) in self.cascaders.iteritems():
             if len(cascSubjects) == 0:
+                continue
+
+            if includeMe == False and user == self.username:
                 continue
 
             if host and host != cascHost:
@@ -112,7 +129,7 @@ class CascadersData(object):
 
             yield user, (host, cascSubjects)
 
-    def findCascader(self, username=None, **kwargs):
+    def findCascader(self, username=None, includeMe=False, **kwargs):
         ''' Wrapper around findCascaders, returns the first match or None '''
         if username is not None:
             if len(kwargs):
@@ -120,7 +137,9 @@ class CascadersData(object):
                 return None
             try:
                 host, subjects = self.cascaders[username]
-                if len(subjects) == 0:
+                if len(subjects) == 0: 
+                    return None
+                if includeMe == False and username == self.username:
                     return None
                 return username, (host, subjects)
             except KeyError:
@@ -128,7 +147,7 @@ class CascadersData(object):
                 return None
 
         try:
-            return self.findCascaders(**kwargs).next()
+            return self.findCascaders(includeMe=includeMe, **kwargs).next()
         except StopIteration:
             return None
 
@@ -200,7 +219,10 @@ class CascaderModel(CallbackMixin):
         self._callCallbacks('cascaderschanged', self.cascaders)
 
     def onCascaderJoined(self, username, hostname, subjects):
-        debug('New cascader: %s' % username)
+        debug('New cascader: (%s, (%s, %s)' % (username,
+                                               hostname,
+                                               str(subjects)))
+        self.cascaders.addCascader(username, hostname, subjects)
         self._callCallbacks('cascaderschanged', self.cascaders)
 
     def onCascaderLeft(self, username):
@@ -235,7 +257,7 @@ class CascaderModel(CallbackMixin):
             self._callCallbacks('subjectschanged', self.subjects)
 
         def casc(result):
-            debug('Got cascaders from login')
+            debug('Got cascaders from login: %s' % str(result))
             for usr, host, sub in result:
                 self.cascaders.addCascader(usr, host, sub)
             self._callCallbacks('cascaderschanged', self.cascaders)
@@ -294,7 +316,7 @@ class CascaderModel(CallbackMixin):
 
     @_handleServerLost
     def startCascading(self):
-        self.cascading = False
+        self.cascading = True
         return self.client.startCascading()
 
     @_handleServerLost
@@ -326,4 +348,15 @@ class CascaderModel(CallbackMixin):
     def removeSubjects(self, subjects):
         subjectsToRemove = set(subjects) & self.subjects
         self.cascadeSubjects = self.cascadeSubjects - subjectsToRemove
-        return self.client.removeSubjects(subjectsToAdd)
+        return self.client.removeSubjects(subjectsToRemove)
+
+    @_handleServerLost
+    def askForHelp(self, helpid, username, subject, problem):
+        return self.client.askForHelp(helpid, username, subject, problem)
+
+    @_handleServerLost
+    def sendMessage(self, helpid, toUsername, message):
+        '''
+        This shouldn't really be here I don't think. It isn't abstract enough
+        '''
+        return self.client.sendMessage(helpid, toUsername, message)

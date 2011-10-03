@@ -77,7 +77,7 @@ class RpcService(pb.Referenceable, CallbackMixin):
         self._addCallback('userLeft', func)
 
     def remote_userLeft(self, username):
-        ''' Called when a cascader starts cascading '''
+        '''When a user left '''
         return self._callCallbacks('userLeft', username)
 
     #--------

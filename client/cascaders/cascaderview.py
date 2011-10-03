@@ -148,7 +148,7 @@ class CascadersFrame:
         self.addSubjects(self.settings['cascSubjects'])
 
         if self.settings['cascading'] and self.settings['autocascade']:
-            self.model.startCascading()
+            self.startCascading()
 
     def _getUsername(self):
         try:
@@ -214,16 +214,16 @@ class CascadersFrame:
         #the server
         def onMessageFromServer(fromType, message):
             if fromType == 'user':
-                fromName = fromUsername 
+                fromName = toUsername 
             elif fromType == 'server':
                 fromName = 'Server'
             self.messageDialog.writeMessage(helpid, self.username, message)
             
-        self.service.registerOnMessgeHandler(helpid, onMessageFromServer)
+        self.model.registerOnMessgeHandler(helpid, onMessageFromServer)
 
         def writeFunction(message):
             try:
-                self.model.sendMessage(helpid, toUsername, subject, msg)
+                self.model.sendMessage(helpid, toUsername, message)
             except client.NotConnected:
                 self.onServerLost()
 
@@ -248,10 +248,7 @@ class CascadersFrame:
         #check if user can give help
         if dialog.isAccept():
             debug('Help Accepted')
-
-            print 'Ok, host is %s' % host
             self.setupMessagingWindow(helpid, username, host, True)
-
             return (True, '')
 
         debug('Help rejected')
@@ -289,6 +286,7 @@ class CascadersFrame:
         Cleans the list and updates the list of cascaders avaible. Call
         when filters have been changed
         '''
+
         ls = self.builder.get_object('lsCascList')
         ls.clear()
 
@@ -300,9 +298,10 @@ class CascadersFrame:
         filterLab = getComboBoxText(cbLab)
         filterLab = filterLab if filterLab != 'All' else None
 
-        cascaders = cascaders.findCascaders(lab=filterLab,
-                                            subjects=filterSub)
+        cascaders = list(cascaders.findCascaders(lab=filterLab,
+                                                 subjects=filterSub))
         [ls.append([username]) for username, _ in cascaders]
+        debug('Updating cascaders from: %s' % str(cascaders))
 
     #--------------------------------------------------------------------------
     # GUI events
@@ -410,14 +409,13 @@ class CascadersFrame:
         if event.button != 1 or event.type != gtk.gdk._2BUTTON_PRESS:
             return
         model, itr = tv.get_selection().get_selected()
-        cascaderUsername = model.get_value(itr, 0)
-        self.askForHelp(cascaderUsername)
+        if itr:
+            cascaderUsername = model.get_value(itr, 0)
+            self.askForHelp(cascaderUsername)
 
     def askForHelp(self, cascaderUsername):
-        (_, (cascHost, cascSubjects)) = self.cascaders.findCascader(username=cascaderUsername)
+        (_, (cascHost, cascSubjects)) = self.model.getCascaderData().findCascader(username=cascaderUsername)
 
-        print 'Cascader host is %s' % cascHost
-        
         #ask user topic, brief description
         subject = None
         if getComboBoxText(self.builder.get_object('cbFilterSubject')) != 'All':
@@ -435,10 +433,10 @@ class CascadersFrame:
                                             'Wating for response')
 
             try:
-                d = self.client.askForHelp(helpid,
-                                           cascaderUsername,
-                                           helpDialog.getSubject(),
-                                           helpDialog.getDescription())
+                d = self.model.askForHelp(helpid,
+                                          cascaderUsername,
+                                          helpDialog.getSubject(),
+                                          helpDialog.getDescription())
             except client.NotConnected:
                 self.onServerLost()
     
@@ -458,10 +456,10 @@ class CascadersFrame:
     def onRemoveSubject(self, event):
         tv = self.builder.get_object('tvCascSubjects')
         model, itr = tv.get_selection().get_selected()
-        subject = model.get_value(itr, 0)
-        model.remove(itr)
-
-        self.model.removeSubjects([subject])
+        if itr is not None:
+            subject = model.get_value(itr, 0)
+            model.remove(itr)
+            self.model.removeSubjects([subject])
 
     # Filter Stuff
     def onSubjectSelect(self, event):
