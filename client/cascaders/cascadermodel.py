@@ -272,18 +272,23 @@ class CascaderModel(CallbackMixin):
         return d
 
     def onLogin(self, *a):
+        '''
+        This tries for force everything to the way it was before
+        the server disconnected
+        '''
         debug('Now logged in, trying to restore settings')
         if self.isCascading():
             self.startCascading()
-        self.addSubjects(self.subjects, True)
+        self.addSubjects(self.cascadeSubjects)
 
     #--------------------------------------------------------------------------
     def _handleServerLost(fn):
-        ''' decorator '''
+        ''' decorator TODO really not sure this is needed '''
         def function(self, *args, **kwargs):
             try:
                 return fn(self, *args, **kwargs)
             except client.NotConnected as e:
+                warn('Server was lost')
                 self._serverLost()
                 return e.getDeferred()
         return function
@@ -329,26 +334,20 @@ class CascaderModel(CallbackMixin):
         return self.cascadeSubjects
 
     @_handleServerLost
-    def addSubjects(self, subjects, force=False):
+    def addSubjects(self, subjects):
         '''
-        force - sends the subjects to the server, even if they may be duplicated
+        This doesn't try to mimize data transfer by checking
+        subjects are valid as we may not have retrived the
+        subjects by the time this is called
         '''
-        if force == True:
-            debug('Adding subjects: %s' % str(subjects))
-            self.cascadeSubjects = self.cascadeSubjects & set(subjects)
-            return self.client.addSubjects(subjects)
-        else:
-            subjectsToAdd = set(subjects) & self.subjects
-            self.cascadeSubjects = self.cascadeSubjects | subjectsToAdd
-
-            debug('Adding subjects: %s' % str(subjectsToAdd))
-            return self.client.addSubjects(subjectsToAdd)
+        self.cascadeSubjects = self.cascadeSubjects | set(subjects)
+        debug('Adding subjects: %s' % str(subjects))
+        return self.client.addSubjects(subjects)
 
     @_handleServerLost
     def removeSubjects(self, subjects):
-        subjectsToRemove = set(subjects) & self.subjects
-        self.cascadeSubjects = self.cascadeSubjects - subjectsToRemove
-        return self.client.removeSubjects(subjectsToRemove)
+        self.cascadeSubjects = self.cascadeSubjects - set(subjects)
+        return self.client.removeSubjects(subjects)
 
     @_handleServerLost
     def askForHelp(self, helpid, username, subject, problem):

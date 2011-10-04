@@ -428,15 +428,19 @@ class CascadersFrame:
 
             self.setupMessagingWindow(helpid, cascaderUsername, cascHost, False) 
 
-            self.messageDialog.writeMessage(helpid,
-                                            'SYSTEM',
-                                            'Wating for response')
+            writeSysMsg = lambda m: self.messageDialog.writeMessage(helpid, 'SYSTEM', m)
+            writeSysMsg('Waiting for response...')
+
+            def onNotConnected(reason):
+                reason.trap(client.ClientNotConnected)
+                writeSysMsg('Error: The client was not connected')
 
             try:
                 d = self.model.askForHelp(helpid,
                                           cascaderUsername,
                                           helpDialog.getSubject(),
                                           helpDialog.getDescription())
+                d.addErrback(onNotConnected)
             except client.NotConnected:
                 self.onServerLost()
     

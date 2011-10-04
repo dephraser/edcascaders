@@ -9,6 +9,14 @@ class NotConnected(pb.DeadReferenceError):
     pass
 
 
+class ClientNotConnected(pb.Error):
+    '''
+    Used when the client -> server -> client message failed due to the reciving
+    client not being connected
+    '''
+    pass
+
+
 class DeferredCall(object):
     ''' Simple wrapper around twisteds deferred call '''
     def __init__(self, deferred):
@@ -91,6 +99,21 @@ class DeferredResultWrapper(object):
         function = lambda deferred: deferred.addCallback(*args, **kwargs)
         self.deferred.addCallback(function)
 
+def returnFstArg(function):
+    '''
+    Modifies the function so that it returns the first argument
+    to the function
+
+    This is useful when you want to pass the first argument down
+    a chain of deferres (or rather, hide the fact that you have
+    added callbacks to anything outside the client
+    '''
+    def func(*args, **kwargs):
+        function(*args, **kwargs)
+        if len(args) > 0:
+            return args[0]
+        return None
+    return func
 
 class RpcClient(CallbackMixin):
     '''
@@ -147,7 +170,7 @@ class RpcClient(CallbackMixin):
             raise NotConnected
 
         deferred.addCallback(self._setRoot)
-        deferred.addCallback(lambda *a: self._callCallbacks('connected'))
+        deferred.addCallback(returnFstArg(lambda *a: self._callCallbacks('connected')))
         return deferred
 
     def login(self):
@@ -156,14 +179,15 @@ class RpcClient(CallbackMixin):
                                  self.service,
                                  self.username,
                                  self.hostname)
-        d.addCallback(lambda server: setattr(self, 'server', server))
-        d.addCallback(lambda *a: setattr(self, 'autoReconnect', True))
-        d.addCallback(lambda *a: self._callCallbacks('login'))
+        d.addCallback(returnFstArg(lambda server: setattr(self, 'server', server)))
+        d.addCallback(returnFstArg(lambda *a: setattr(self, 'autoReconnect', True)))
+        d.addCallback(returnFstArg(lambda *a: self._callCallbacks('login')))
         return d
 
     def _setRoot(self, root):
         self.root = root
         root.notifyOnDisconnect(self._onDisconnected)
+        return root
 
     #---------------------------------------------------------------------------
     # handles disconnected servers
@@ -189,7 +213,7 @@ class RpcClient(CallbackMixin):
 
         d = self.connect()
         d.addCallback(self._repeatLogin)
-        d.addCallback(lambda*a: debug('Connected on attempt %d' % i))
+        d.addCallback(returnFstArg(lambda*a: debug('Connected on attempt %d' % i)))
         d.addErrback(onErr)
 
     def _repeatLogin(self, result):
@@ -201,6 +225,7 @@ class RpcClient(CallbackMixin):
         d = self.login()
         d.addCallback(lambda *a: debug('Logged in'))
         d.addErrback(onErr)
+        return result
 
     #---------------------------------------------------------------------------
 

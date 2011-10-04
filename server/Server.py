@@ -31,6 +31,13 @@ logger.addHandler(handler)
 logger.addHandler(logging.StreamHandler())
 
 #------------------------------------------------------------------------------
+class ClientNotConnected(pb.Error):
+    '''
+    Used when the client -> server -> client message failed due to the reciving
+    client not being connected
+    '''
+    pass
+#------------------------------------------------------------------------------
 # constants
 subjectList = set(["inf1-fp","inf1-cl","inf1-da","inf1-op","inf2a","inf2b","inf2c-cs",
         "inf2-se","inf2d","Java","Haskell","Python","Ruby","C","C++","PHP",
@@ -237,6 +244,7 @@ class UserService(pb.Referenceable):
         except pb.DeadReferenceError:
             logger.debug('Client wasn\'t connected')
             users[username].remote_logout()
+            raise ClientNotConnected(username)
 
         cb = lambda res : self.onAskForHelpResponse(helpId, username, res)
         deferred.addCallback(cb)
