@@ -100,7 +100,7 @@ class CascadersFrame:
     def initTray(self):
         icon = os.path.join(os.path.dirname(__file__),
                             'icons',
-                            'cascade32.png')
+                            'cascade.ico')
         self.trayIcon = TrayIcon(self, icon)
         self.window.connect('delete-event', lambda w, e: w.hide() or True)
 
