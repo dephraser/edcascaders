@@ -9,6 +9,10 @@ import gtk
 from collections import defaultdict
 
 class CallbackMixin(object):
+    '''
+    Simple class that allows callbacks to be registed and called. For each
+    id it supports multiple callbacks
+    '''
     def __init__(self):
         self._callbacks = defaultdict(list)
 
