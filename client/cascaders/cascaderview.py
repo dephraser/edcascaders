@@ -172,14 +172,22 @@ class CascadersFrame:
         self.model.registerOnSubjectChanged(self.updateAllSubjects)
         self.model.registerOnUserAskingForHelp(self.onUserAskingForHelp)
 
+        self.model.registerOnDisconnected(self.onDisconnect)
+        self.model.registerOnConnected(self.onLogin)
+
+    def onDisconnect(self):
+        status = self.builder.get_object('lbStatus')
+        status.set('Connecting...')
+
+    def onLogin(self):
+        status = self.builder.get_object('lbStatus')
+        status.set('Connected')
+
     def initConnection(self):
         '''
         called in the constructor. also does the setup post connect
         '''
         debug('Connecting...')
-        status = self.builder.get_object('lbStatus')
-        status.set('Connecting...')
-
         self.builder.get_object('lbUsername').set(self.username)
 
         def loginErr(reason):
